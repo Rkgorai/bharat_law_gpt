@@ -1,5 +1,6 @@
 import streamlit as st
 import os
+import time
 from src.vectorstore import FaissVectorStore
 from src.search import RAGSearch
 
@@ -93,43 +94,38 @@ with st.sidebar:
         st.caption(f"Model: `{selected_model_id}`")
     else:
         st.error("❌ Database Missing")
-        st.info("Run backend build script.")
+        st.info("Run 'build_db.py' to create the database.")
 
     st.divider()
     if st.button("Clear Chat History"):
         st.session_state.messages = []
         st.rerun()
 
-# --- RAG INITIALIZATION ---
-def initialize_rag():
-    """Initializes RAG with the currently selected model."""
-    if st.session_state.rag_system is None:
-        try:
-            # Pass the dynamic model ID to the RAG class
-            st.session_state.rag_system = RAGSearch(
-                persist_dir=DB_PATH, 
-                llm_model=st.session_state.current_model
-            )
-        except Exception as e:
-            st.error(f"Failed to load model {st.session_state.current_model}: {e}")
+# --- RAG INITIALIZATION (LAZY LOADING) ---
 
-# 1. Load System
-if os.path.exists(os.path.join(DB_PATH, "faiss.index")):
+@st.cache_resource(show_spinner=False)
+def get_rag_engine(persist_dir, model_name):
+    """
+    Cached loader. This keeps the heavy Embedding Model in memory 
+    even if you refresh the page.
+    """
+    print(f"[INFO] Loading RAG Engine with {model_name}...") 
+    return RAGSearch(persist_dir=persist_dir, llm_model=model_name)
+
+def ensure_system_ready():
+    """Lazy loader wrapper."""
     if st.session_state.rag_system is None:
-        with st.spinner(f"Initializing {selected_label}..."):
-            initialize_rag()
-else:
-    st.warning("Please ensure the Vector Database is built.")
-    st.stop()
+        with st.spinner(f"⚡ Activating {st.session_state.current_model}..."):
+            st.session_state.rag_system = get_rag_engine(DB_PATH, st.session_state.current_model)
 
 # --- CHAT INTERFACE ---
 
-# Display History
+# 1. Display History
 for message in st.session_state.messages:
     with st.chat_message(message["role"]):
         st.markdown(message["content"])
 
-# Handle Input
+# 2. Handle Input
 if prompt := st.chat_input("Ask a legal question..."):
     # User
     with st.chat_message("user"):
@@ -137,19 +133,42 @@ if prompt := st.chat_input("Ask a legal question..."):
     st.session_state.messages.append({"role": "user", "content": prompt})
 
     # Assistant
-    if st.session_state.rag_system:
-        with st.chat_message("assistant"):
+    with st.chat_message("assistant"):
+        # A. Check Database
+        if not os.path.exists(os.path.join(DB_PATH, "faiss.index")):
+            st.error("Vector Database not found. Please run the build script.")
+            st.stop()
+            
+        # B. Lazy Load System (If not ready)
+        ensure_system_ready()
+        
+        # C. Generate Answer
+        try:
             with st.spinner("Analyzing legal docs..."):
-                try:
-                    response = st.session_state.rag_system.search_and_summarize(prompt)
-                    st.markdown(response["answer"])
+                # 1. Prepare History (Exclude current prompt to avoid duplication)
+                history_for_llm = st.session_state.messages[:-1]
+                
+                # 2. Call Search with History
+                result = st.session_state.rag_system.search_and_summarize(
+                    query=prompt, 
+                    chat_history=history_for_llm
+                )
+                
+                # 3. Extract Data
+                answer_text = result["answer"]
+                sources = result["sources"]
 
-                    # Display Sources in a collapse block
+                # 4. Display Answer
+                st.markdown(answer_text)
+                
+                # 5. Display Sources in Expander
+                if sources:
                     with st.expander("📚 View Legal Sources"):
-                        for source in response["sources"]:
-                            st.write(f"- {source}")
-                    st.session_state.messages.append({"role": "assistant", "content": response["answer"]})
-                except Exception as e:
-                    st.error(f"Error generating response: {e}")
-    else:
-        st.error("System not initialized.")
+                        for source in sources:
+                            st.caption(f"📄 {source}")
+                
+                # 6. Save to History
+                st.session_state.messages.append({"role": "assistant", "content": answer_text})
+                
+        except Exception as e:
+            st.error(f"Error generating response: {e}")
