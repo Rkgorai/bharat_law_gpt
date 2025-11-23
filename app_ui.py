@@ -12,9 +12,8 @@ DB_PATH = "db/faiss_store"
 AVAILABLE_MODELS = {
     "Llama 3.1 8B (Fastest)": "llama-3.1-8b-instant",
     "Kimi K2 Instruct (Moonshot)": "moonshotai/kimi-k2-instruct-0905",
-    "Mixtral 8x7B (Balanced)": "mixtral-8x7b-32768",
-    "Gemma 2 9B (Google)": "gemma2-9b-it",
-    "Llama 3 70B (Smartest)": "llama3-70b-8192"
+    "openai/gpt-oss-20b (Accurate)": "openai/gpt-oss-20b",
+    "qwen/qwen3-32b-chat (Powerful)": "qwen/qwen3-32b"
 }
 
 st.set_page_config(page_title=PAGE_TITLE, page_icon=PAGE_ICON, layout="centered")
@@ -143,8 +142,13 @@ if prompt := st.chat_input("Ask a legal question..."):
             with st.spinner("Analyzing legal docs..."):
                 try:
                     response = st.session_state.rag_system.search_and_summarize(prompt)
-                    st.markdown(response)
-                    st.session_state.messages.append({"role": "assistant", "content": response})
+                    st.markdown(response["answer"])
+
+                    # Display Sources in a collapse block
+                    with st.expander("📚 View Legal Sources"):
+                        for source in response["sources"]:
+                            st.write(f"- {source}")
+                    st.session_state.messages.append({"role": "assistant", "content": response["answer"]})
                 except Exception as e:
                     st.error(f"Error generating response: {e}")
     else:
