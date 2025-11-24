@@ -8,8 +8,9 @@ from src.search import RAGSearch
 PAGE_TITLE = "Bharat Law GPT"
 PAGE_ICON = "⚖️"
 DB_PATH = "db/faiss_store"
+DATA_DIR = "legal_docs"
 
-# Supported Models on Groq
+# Supported Models
 AVAILABLE_MODELS = {
     "Llama 3.1 8B (Fastest)": "llama-3.1-8b-instant",
     "Kimi K2 Instruct (Moonshot)": "moonshotai/kimi-k2-instruct-0905",
@@ -19,39 +20,31 @@ AVAILABLE_MODELS = {
 
 st.set_page_config(page_title=PAGE_TITLE, page_icon=PAGE_ICON, layout="centered")
 
-# --- CUSTOM CSS FOR STICKY HEADER ---
+# --- CUSTOM CSS ---
 st.markdown(
     """
     <style>
-        /* Hide default main block padding to make header sit flush */
-        .block-container {
-            padding-top: 3rem;
-        }
-        
-        /* Sticky Header Class */
+        .block-container { padding-top: 3rem; }
         .sticky-header {
             position: sticky;
             top: 0;
             z-index: 999;
-            background-color: rgba(255, 255, 255, 0.95); /* Translucent white */
+            background-color: rgba(255, 255, 255, 0.95);
             backdrop-filter: blur(10px);
-            padding: 10px 0px;
+            padding: 15px 0px;
             border-bottom: 1px solid rgba(49, 51, 63, 0.1);
             margin-bottom: 20px;
         }
-        
-        /* Dark mode adjustment */
         @media (prefers-color-scheme: dark) {
             .sticky-header {
-                background-color: rgba(14, 17, 23, 0.95); /* Streamlit dark bg */
+                background-color: rgba(14, 17, 23, 0.95);
                 border-bottom: 1px solid rgba(250, 250, 250, 0.1);
             }
         }
     </style>
-    
     <div class="sticky-header">
-        <h1 style="margin:0; padding:0;">⚖️ 🇮🇳 Bharat Law GPT</h1>
-        <small style="color: gray;">Your AI Legal Assistant for Indian Constitution & Acts</small>
+        <h1 style="margin:0; padding:0; font-size: 2.2rem;">⚖️ 🇮🇳 Bharat Law GPT</h1>
+        <small style="color: gray; font-size: 0.9rem;">Your AI Legal Assistant for Indian Constitution & Acts</small>
     </div>
     """,
     unsafe_allow_html=True
@@ -67,108 +60,112 @@ if "rag_system" not in st.session_state:
 if "current_model" not in st.session_state:
     st.session_state.current_model = "llama-3.1-8b-instant"
 
-# --- SIDEBAR CONFIG ---
+if "last_sources" not in st.session_state:
+    st.session_state.last_sources = []
+
+# --- SIDEBAR ---
 with st.sidebar:
-    st.header("⚙️ Configuration")
-    
-    # 1. Model Selection Dropdown
-    selected_label = st.selectbox(
-        "Select AI Model",
-        options=list(AVAILABLE_MODELS.keys()),
-        index=0
-    )
+    st.header("⚙️ Settings")
+    selected_label = st.selectbox("Select Brain", options=list(AVAILABLE_MODELS.keys()), index=0)
     selected_model_id = AVAILABLE_MODELS[selected_label]
 
-    # Detect Model Change
     if selected_model_id != st.session_state.current_model:
         st.session_state.current_model = selected_model_id
-        st.session_state.rag_system = None # Force reload
-        st.toast(f"Switched to {selected_label}", icon="🔄")
+        st.session_state.rag_system = None
+        st.toast(f"Brain switched to: {selected_label}", icon="🧠")
 
     st.divider()
-    
-    # 2. System Status
-    index_path = os.path.join(DB_PATH, "faiss.index")
-    if os.path.exists(index_path):
-        st.success(f"✅ Database Active")
-        st.caption(f"Model: `{selected_model_id}`")
+    if os.path.exists(os.path.join(DB_PATH, "faiss.index")):
+        st.success("✅ Knowledge Base Active")
     else:
         st.error("❌ Database Missing")
-        st.info("Run 'build_db.py' to create the database.")
+        st.info("Run 'build_db.py'")
 
     st.divider()
-    if st.button("Clear Chat History"):
+    if st.button("🗑️ Clear Chat"):
         st.session_state.messages = []
+        st.session_state.last_sources = []
         st.rerun()
 
-# --- RAG INITIALIZATION (LAZY LOADING) ---
-
+# --- LAZY LOAD RAG ---
 @st.cache_resource(show_spinner=False)
 def get_rag_engine(persist_dir, model_name):
-    """
-    Cached loader. This keeps the heavy Embedding Model in memory 
-    even if you refresh the page.
-    """
-    print(f"[INFO] Loading RAG Engine with {model_name}...") 
     return RAGSearch(persist_dir=persist_dir, llm_model=model_name)
 
 def ensure_system_ready():
-    """Lazy loader wrapper."""
     if st.session_state.rag_system is None:
         with st.spinner(f"⚡ Activating {st.session_state.current_model}..."):
             st.session_state.rag_system = get_rag_engine(DB_PATH, st.session_state.current_model)
 
-# --- CHAT INTERFACE ---
-
+# --- CHAT UI ---
 # 1. Display History
 for message in st.session_state.messages:
     with st.chat_message(message["role"]):
         st.markdown(message["content"])
 
-# 2. Handle Input
+# 2. Sources Area (Dropdown for LATEST response only)
+if st.session_state.last_sources:
+    with st.expander("📚 View References"):
+        for source in st.session_state.last_sources:
+            try:
+                # Source format from DB: "C:\Path\To\File.pdf (Pg 5)"
+                file_part, page_part = source.rsplit(" (Pg ", 1)
+                clean_filename = os.path.basename(file_part)
+                page_num_str = page_part.replace(")", "")
+                st.markdown(f"- 📄 **{clean_filename}** (Page {page_num_str})")
+            except Exception:
+                st.markdown(f"- {source}")
+
+# 3. Handle Input
 if prompt := st.chat_input("Ask a legal question..."):
-    # User
+    # User Message
     with st.chat_message("user"):
         st.markdown(prompt)
     st.session_state.messages.append({"role": "user", "content": prompt})
 
-    # Assistant
+    # Assistant Response
     with st.chat_message("assistant"):
-        # A. Check Database
         if not os.path.exists(os.path.join(DB_PATH, "faiss.index")):
             st.error("Vector Database not found. Please run the build script.")
             st.stop()
             
-        # B. Lazy Load System (If not ready)
         ensure_system_ready()
         
-        # C. Generate Answer
         try:
             with st.spinner("Analyzing legal docs..."):
-                # 1. Prepare History (Exclude current prompt to avoid duplication)
                 history_for_llm = st.session_state.messages[:-1]
                 
-                # 2. Call Search with History
                 result = st.session_state.rag_system.search_and_summarize(
                     query=prompt, 
                     chat_history=history_for_llm
                 )
                 
-                # 3. Extract Data
                 answer_text = result["answer"]
-                sources = result["sources"]
+                raw_sources = result["sources"]
 
-                # 4. Display Answer
+                # --- LOGIC FIX: HIDE SOURCES IF ANSWER IS NEGATIVE ---
+                answer_lower = answer_text.lower()
+                negative_phrases = [
+                    "i could not find", 
+                    "no relevant documents", 
+                    "i do not have any information", 
+                    "i don't have any information",
+                    "does not contain information",
+                    "i cannot cite"
+                ]
+                
+                if any(phrase in answer_lower for phrase in negative_phrases):
+                    raw_sources = []
+
+                # Update Session State
+                st.session_state.last_sources = raw_sources
+                st.session_state.messages.append({"role": "assistant", "content": answer_text})
+                
+                # Display Answer
                 st.markdown(answer_text)
                 
-                # 5. Display Sources in Expander
-                if sources:
-                    with st.expander("📚 View Legal Sources"):
-                        for source in sources:
-                            st.caption(f"📄 {source}")
-                
-                # 6. Save to History
-                st.session_state.messages.append({"role": "assistant", "content": answer_text})
+                # Rerun to show the updated sources dropdown (or hide it)
+                st.rerun()
                 
         except Exception as e:
             st.error(f"Error generating response: {e}")
