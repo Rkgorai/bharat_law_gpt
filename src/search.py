@@ -1,13 +1,19 @@
 import os
 from dotenv import load_dotenv
-from src.vectorstore import FaissVectorStore
+from src.hybrid_vectorstore import HybridVectorStore
 from langchain_groq import ChatGroq
 
 load_dotenv()
 
 class RAGSearch:
     def __init__(self, persist_dir: str = "db/faiss_store", embedding_model: str = "all-MiniLM-L6-v2", llm_model: str = "llama-3.1-8b-instant"):
-        self.vectorstore = FaissVectorStore(persist_dir, embedding_model)
+        # Use hybrid vectorstore instead of regular FAISS
+        self.vectorstore = HybridVectorStore(
+            persist_dir=persist_dir,
+            embedding_model=embedding_model,
+            bm25_weight=0.5,  # Equal weighting for BM25 and vector search
+            vector_weight=0.5
+        )
         # Load the existing index if available
         if os.path.exists(os.path.join(persist_dir, "faiss.index")):
             self.vectorstore.load()
