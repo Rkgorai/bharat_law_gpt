@@ -12,8 +12,8 @@ DATA_DIR = "legal_docs"
 
 # Supported Models
 AVAILABLE_MODELS = {
-    "Llama 3.1 8B (Fastest)": "llama-3.1-8b-instant",
     "Kimi K2 Instruct (Moonshot)": "moonshotai/kimi-k2-instruct-0905",
+    "Llama 3.1 8B (Fastest)": "llama-3.1-8b-instant",
     "openai/gpt-oss-20b (Accurate)": "openai/gpt-oss-20b",
     "qwen/qwen3-32b-chat (Powerful)": "qwen/qwen3-32b"
 }
@@ -103,18 +103,18 @@ for message in st.session_state.messages:
     with st.chat_message(message["role"]):
         st.markdown(message["content"])
 
-# 2. Sources Area (Dropdown for LATEST response only)
-if st.session_state.last_sources:
-    with st.expander("📚 View References"):
-        for source in st.session_state.last_sources:
-            try:
-                # Source format from DB: "C:\Path\To\File.pdf (Pg 5)"
-                file_part, page_part = source.rsplit(" (Pg ", 1)
-                clean_filename = os.path.basename(file_part)
-                page_num_str = page_part.replace(")", "")
-                st.markdown(f"- 📄 **{clean_filename}** (Page {page_num_str})")
-            except Exception:
-                st.markdown(f"- {source}")
+# # 2. Sources Area (Dropdown for LATEST response only)
+# if st.session_state.last_sources:
+#     with st.expander("📚 View References"):
+#         for source in st.session_state.last_sources:
+#             try:
+#                 # Source format from DB: "C:\Path\To\File.pdf (Pg 5)"
+#                 file_part, page_part = source.rsplit(" (Pg ", 1)
+#                 clean_filename = os.path.basename(file_part)
+#                 page_num_str = page_part.replace(")", "")
+#                 st.markdown(f"- 📄 **{clean_filename}** (Page {page_num_str})")
+#             except Exception:
+#                 st.markdown(f"- {source}")
 
 # 3. Handle Input
 if prompt := st.chat_input("Ask a legal question..."):
