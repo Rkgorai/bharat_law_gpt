@@ -6,66 +6,104 @@ Bharat Law GPT is an AI system designed to answer questions related to Indian la
 Unlike generic chatbots, this project uses **Retrieval-Augmented Generation (RAG)** to ground all answers on real legal documents.
 
 This makes the system:
-- More accurate  
-- More explainable  
-- Less hallucination-prone  
-- More useful for legal learners & professionals  
+- **More accurate** (Answers grounded in uploaded PDFs)
+- **More explainable** (Cites sources)
+- **Less hallucination-prone**
+- **More useful** for legal learners & professionals
+
+Now featuring a **Dual-Mode Interface**:
+1.  **💬 Text Mode:** Classic chat for detailed queries.
+2.  **🎙️ Voice Mode:** Hands-free, voice-to-voice interaction with auto-stop and auto-play.
+
+---
+
+## 🎨 Workflows & Architecture
+
+### 1️⃣ The RAG Pipeline (Core Brain)
+This workflow explains how the system "reads" legal documents and answers questions.
+
+```mermaid
+graph TD
+    A[📂 Legal PDFs] -->|Extract Text| B(Text Chunks)
+    B -->|Generate Embeddings| C[🧠 Embedding Model]
+    C -->|Store Vectors| D[(🗄️ FAISS Vector DB)]
+    
+    E[👤 User Query] -->|Embed Query| C
+    C -->|Search Similar| D
+    D -->|Retrieve Top-K Context| F[📝 Relevant Legal Sections]
+    
+    F -->|Context + Query| G[🤖 LLM Brain]
+    G -->|Generate Answer| H[✅ Final Legal Advice]
+```
+
+### 2️⃣ The Voice Interaction Loop
+This workflow explains the hands-free voice experience.
+
+```mermaid
+sequenceDiagram
+    participant U as 👤 User
+    participant UI as 📱 App Interface
+    participant STT as 👂 Whisper (STT)
+    participant RAG as 🧠 RAG Engine
+    participant TTS as 🗣️ Edge-TTS
+    
+    U->>UI: 🎙️ Speaks Question
+    UI->>STT: Sends Audio
+    STT->>UI: Returns Transcribed Text
+    
+    Note over UI: User Reviews/Edits Text
+    
+    UI->>RAG: Submits Query
+    RAG->>RAG: Vector Search + LLM Gen
+    RAG->>UI: Returns Text Answer
+    
+    UI->>TTS: Sends Answer Text
+    TTS->>UI: Returns MP3 Audio
+    UI->>U: 🔊 Auto-Plays Answer
+```
 
 ---
 
 ## ✨ Features
-- Retrieve the most relevant legal documents **before** answering  
-- Works with **Indian Penal Code**, **Acts**, **Regulations**, etc.  
-- Fully modular RAG architecture  
-- Build your own FAISS-based legal knowledge base  
-- Query through an easy-to-use Web UI  
-- Add or update PDFs anytime  
-- Jupyter notebooks for analysis & experimentation  
+- **Retrieval-Augmented Generation (RAG):** Retrieves the most relevant legal documents **before** answering.
+- **Dual Interface:** Switch seamlessly between Text and Voice modes.
+- **Voice-to-Voice:**
+  - Speak your query (STT).
+  - Listen to the AI's legal advice (TTS).
+  - Auto-hides "Stop" controls when the answer finishes.
+- **Review & Edit:** Review your voice query text before submitting to ensure accuracy.
+- **Optimized Performance:** Uses **Shared Resource Loading** to prevent model reloading when switching pages.
+- **Modular Architecture:** Easy to add new documents or switch LLMs (Llama, Moonshot, Qwen, etc.).
+- **Build Your Knowledge Base:** Script included to ingest your own PDF collection.
 
 ---
 
 ## 📂 Project Structure
 
-```
+```text
 bharat_law_gpt/
 │
 ├── legal_docs/
 │   └── pdf_files/          # Raw Indian legal documents used to build the vector DB
 │
 ├── db/
-│   └── faiss_store/        # Persistent FAISS vector index
+│   └── faiss_store/        # Persistent FAISS vector index (Generated)
 │
-├── src/                    # Core code: embeddings, retrieval, utilities, pipelines
+├── src/                    # Core Logic
+│   ├── search.py           # RAG Retrieval & LLM Chain
+│   ├── voice_handler.py    # STT (Whisper) & TTS (EdgeTTS) logic
+│   ├── shared.py           # Resource caching (prevents reload lag)
+│   └── ...
 │
-├── notebooks/              # Experimentation & testing notebooks
+├── pages/                  # Streamlit Pages
+│   ├── app_text_ui.py      # Text Chat Interface
+│   └── app_voice_ui.py     # Voice Chat Interface
 │
-├── build_db.py             # Script to ingest PDFs and build the FAISS database
-├── app.py                  # Backend API for RAG queries
-├── app_ui.py               # Frontend Interface (Streamlit/Gradio)
-│
-├── requirements.txt        # Project dependencies
+├── app_ui.py               # Main Landing Page / Portal
+├── build_db.py             # Script to ingest PDFs and build the database
+├── requirements.txt        # Python dependencies
 └── README.md
 ```
-
----
-
-## 🔍 How the RAG Pipeline Works
-
-### **1️⃣ Document Ingestion**
-PDFs inside `legal_docs/pdf_files/` are extracted, cleaned, and split into chunks.
-
-### **2️⃣ Embedding & Vector Store**
-- Each text chunk → embedding  
-- Embeddings stored in **FAISS index** under `db/faiss_store`
-
-### **3️⃣ User Query**
-- Query is converted to an embedding  
-- FAISS retrieves top relevant legal snippets
-
-### **4️⃣ Answer Generation**
-- Retrieved context + user query is passed to an LLM  
-- Model generates a legally-grounded answer  
-- Optionally returns citations & retrieved excerpts
 
 ---
 
@@ -77,93 +115,82 @@ git clone https://github.com/Rkgorai/bharat_law_gpt.git
 cd bharat_law_gpt
 ```
 
-### **2. Install dependencies**
+### **2. Install Python dependencies**
 ```bash
 pip install -r requirements.txt
 ```
 
-### **3. Add legal PDFs**
-Place all legal documents into:
+### **3. Install System Dependencies (Linux/Mac)**
+Required for audio playback functionality.
+```bash
+sudo apt update
+sudo apt install mpv ffmpeg
 ```
+
+### **4. Add Legal PDFs**
+Place your PDF files (Constitution, IPC, Acts) into:
+```text
 legal_docs/pdf_files/
 ```
 
-### **4. Build the vector database**
+### **5. Build the Database**
+This step processes your PDFs and creates the FAISS index.
 ```bash
 python build_db.py
 ```
 
-### **5. Run the application**
-
-#### **Backend/API**
+### **6. Run the Application**
+Launch the main portal.
 ```bash
-python app.py
+python -m streamlit run app_ui.py
 ```
-
-#### **Frontend UI**
-```bash
-python app_ui.py
-```
-
-Then visit the shown URL (e.g., `http://localhost:8501`).
+Visit the URL shown (usually `http://localhost:8501`).
 
 ---
 
 ## 🧪 Example Usage
 
-**User:**  
-> "What does Section 420 IPC mean?"
+**User (Voice Mode):** > 🎤 *Tap Record* -> "What are my rights if I get arrested?"
 
-**System flow:**  
-- Query embedded → FAISS retrieves IPC Section 420 text  
-- LLM processes retrieved content  
-- Output includes explanation + legal source  
+**System Flow:**
+1. **Transcribe:** Audio -> "What are my rights if I get arrested?"
+2. **Review:** User confirms the text.
+3. **Retrieve:** FAISS fetches "DK Basu Guidelines" & "CrPC Section 41B".
+4. **Generate:** LLM creates a summary of rights.
+5. **Speak:** Audio generates and plays automatically.
 
-**Output:**  
-> Section 420 of IPC deals with cheating and dishonestly inducing delivery of property…  
-> **Source:** Indian Penal Code, Section 420  
+**Output:** > "You have the right to know the grounds of arrest, the right to bail for bailable offenses, and the right to a lawyer..."
 
 ---
 
 ## 📌 Why This Project Is Useful
-- Legal knowledge is scattered across massive documents  
-- Search engines are not tailored for legal phrasing  
-- Generic LLMs hallucinate about law  
-- Bharat Law GPT ensures answers are **based on real legal text**, improving trust & usability  
-
-Ideal for:
-- Law students  
-- Legal researchers  
-- Ordinary people seeking legal clarity  
-- Developers exploring domain-specific RAG systems  
+- **Legal Literacy:** Makes complex laws accessible to everyone via simple voice interaction.
+- **Accuracy:** Unlike ChatGPT, this system cites specific acts and sections from your uploaded documents.
+- **Accessibility:** Voice mode helps users who may prefer speaking over typing.
 
 ---
 
 ## 🧩 Future Enhancements
-- Add Supreme Court / High Court judgments  
-- Add case-law summarization  
-- Improve chunking for long judgments  
-- Switch to domain-tuned legal embeddings  
-- Enable chat history and follow-up queries  
-- Deploy on cloud (AWS/GCP/Azure/HuggingFace)
+- [ ] Support for Hindi/Regional languages (STT & TTS).
+- [ ] Citations dropdown in Voice Mode.
+- [ ] Deployment to Cloud (Streamlit Cloud/HuggingFace Spaces).
+- [ ] Integration with specialized legal LLMs (LawGPT).
 
 ---
 
 ## 🚧 Limitations
-⚠️ **This system is NOT a substitute for professional legal advice.**  
-It is an educational and research tool.
+⚠️ **This system is NOT a substitute for professional legal advice.** It is an educational and research tool. AI can make mistakes ("hallucinations"), even with RAG. Always verify with official legal sources or a qualified lawyer.
 
 ---
 
 ## 👥 Contributing
 Contributions are welcome!
-- Add more legal documents  
-- Improve RAG pipeline  
-- Create better UI components  
-- Submit issues or pull requests  
+- Add more legal documents.
+- Improve the RAG pipeline or prompts.
+- Create better UI components.
 
 ---
 
 ## ⭐ Support
-If you like this project, please star the repo ⭐  
-Your support encourages further development.
+If you find this project useful, please **star the repo ⭐**.
+Your support encourages further development!
