@@ -13,3 +13,8 @@ langchain_openai
 langgraph
 tqdm
 rank-bm25
+streamlit
+streamlit-mic-recorder
+faster-whisper 
+edge-tts 
+asyncio
