@@ -1,3 +1,9 @@
+import os
+import sys
+
+# Add the parent directory to sys.path so we can import 'src'
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
+
 import streamlit as st
 import time
 import threading
@@ -75,7 +81,6 @@ voice = get_voice_handler()
 rag_engine = get_rag_engine(st.session_state.current_model)
 
 # --- AUTO-RESET LOGIC ---
-# If the app reloads and audio is NOT playing, force the flag to False immediately.
 if st.session_state.is_speaking and not voice.is_playing():
     st.session_state.is_speaking = False
 
@@ -83,6 +88,13 @@ if st.session_state.is_speaking and not voice.is_playing():
 with st.sidebar:
     st.header("⚙️ Settings")
     
+    # 1. NAVIGATION (Switch Back to Text)
+    if st.button("💬 Switch to Text Mode"):
+        st.switch_page("app_ui.py")
+        
+    st.divider()
+    
+    # 2. Settings
     AVAILABLE_MODELS = {
         "Kimi K2 (Moonshot)": "moonshotai/kimi-k2-instruct-0905",
         "Llama 3.1 8B": "llama-3.1-8b-instant",
@@ -120,7 +132,6 @@ for msg in st.session_state.history:
 
 
 # --- AUDIO CONTROL (Floating Stop Button) ---
-# We use the flag + the actual status from the handler
 if st.session_state.is_speaking and voice.is_playing():
     col_center = st.columns([1, 1, 1])
     with col_center[1]:
@@ -183,7 +194,7 @@ with st.container():
 
     # STATE B: Recorder Button
     else:
-        # Disable recorder if we are currently speaking to prevent overlap
+        # Disable recorder if we are currently speaking
         if st.session_state.is_speaking:
             st.info("🔊 Assistant is speaking...")
         else:
@@ -202,10 +213,7 @@ with st.container():
 
     st.markdown('</div>', unsafe_allow_html=True)
 
-# --- WATCHER LOOP---
-# This block runs at the end of the script.
-# If we are speaking, it waits 1s, then reruns the whole script.
-# This forces the "if voice.is_playing()" check at the top to run again.
+# --- WATCHER LOOP ---
 if st.session_state.is_speaking:
     time.sleep(1)
     st.rerun()

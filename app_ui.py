@@ -41,6 +41,8 @@ st.markdown(
                 border-bottom: 1px solid rgba(250, 250, 250, 0.1);
             }
         }
+        /* Navigation Button Styling */
+        div.stButton > button { width: 100%; }
     </style>
     <div class="sticky-header">
         <h1 style="margin:0; padding:0; font-size: 2.2rem;">⚖️ 🇮🇳 Bharat Law GPT</h1>
@@ -66,6 +68,14 @@ if "last_sources" not in st.session_state:
 # --- SIDEBAR ---
 with st.sidebar:
     st.header("⚙️ Settings")
+    
+    # 1. NAVIGATION (Switch to Voice)
+    if st.button("🎙️ Switch to Voice Mode"):
+        st.switch_page("pages/app_voice_ui.py")
+    
+    st.divider()
+
+    # 2. Brain Selection
     selected_label = st.selectbox("Select Brain", options=list(AVAILABLE_MODELS.keys()), index=0)
     selected_model_id = AVAILABLE_MODELS[selected_label]
 
@@ -103,20 +113,7 @@ for message in st.session_state.messages:
     with st.chat_message(message["role"]):
         st.markdown(message["content"])
 
-# # 2. Sources Area (Dropdown for LATEST response only)
-# if st.session_state.last_sources:
-#     with st.expander("📚 View References"):
-#         for source in st.session_state.last_sources:
-#             try:
-#                 # Source format from DB: "C:\Path\To\File.pdf (Pg 5)"
-#                 file_part, page_part = source.rsplit(" (Pg ", 1)
-#                 clean_filename = os.path.basename(file_part)
-#                 page_num_str = page_part.replace(")", "")
-#                 st.markdown(f"- 📄 **{clean_filename}** (Page {page_num_str})")
-#             except Exception:
-#                 st.markdown(f"- {source}")
-
-# 3. Handle Input
+# 2. Handle Input
 if prompt := st.chat_input("Ask a legal question..."):
     # User Message
     with st.chat_message("user"):
@@ -143,7 +140,7 @@ if prompt := st.chat_input("Ask a legal question..."):
                 answer_text = result["answer"]
                 raw_sources = result["sources"]
 
-                # --- LOGIC FIX: HIDE SOURCES IF ANSWER IS NEGATIVE ---
+                # Logic to hide empty/negative sources
                 answer_lower = answer_text.lower()
                 negative_phrases = [
                     "i could not find", 
@@ -164,7 +161,6 @@ if prompt := st.chat_input("Ask a legal question..."):
                 # Display Answer
                 st.markdown(answer_text)
                 
-                # Rerun to show the updated sources dropdown (or hide it)
                 st.rerun()
                 
         except Exception as e:
