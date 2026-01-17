@@ -18,3 +18,4 @@ streamlit-mic-recorder
 faster-whisper 
 edge-tts 
 asyncio
+mutagen

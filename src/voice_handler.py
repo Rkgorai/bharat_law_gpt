@@ -1,18 +1,16 @@
 import os
 import asyncio
-import subprocess
-import shutil
-from faster_whisper import WhisperModel
 import edge_tts
+from faster_whisper import WhisperModel
 
 class VoiceHandler:
     def __init__(self):
         print("[INFO] Loading Voice Models...")
         self.stt_model = WhisperModel("tiny", device="cpu", compute_type="int8")
         self.tts_voice = "en-IN-NeerjaNeural" 
-        self.current_process = None
 
     def transcribe(self, audio_bytes):
+        """Convert Audio to Text"""
         temp_filename = "temp_input.wav"
         with open(temp_filename, "wb") as f:
             f.write(audio_bytes)
@@ -23,58 +21,21 @@ class VoiceHandler:
             print(f"[ERROR] STT Failed: {e}")
             return None
 
-    def stream_audio(self, text):
-        try:
-            asyncio.run(self._stream_to_speakers(text))
-            return True
-        except Exception as e:
-            print(f"[ERROR] Streaming Failed: {e}")
-            return False
-
-    def stop_audio(self):
-        """Kills the active audio process"""
-        print("[INFO] Stopping Audio...")
-        if self.current_process:
-            try:
-                self.current_process.terminate()
-                self.current_process.wait(timeout=0.2)
-            except Exception:
-                pass
-            self.current_process = None
-        # Force kill any lingering mpv instances
-        os.system("pkill mpv")
-
-    def is_playing(self):
-        """Checks if audio is currently playing"""
-        if self.current_process:
-            # poll() returns None if process is still running
-            if self.current_process.poll() is None:
-                return True
-        return False
-
-    async def _stream_to_speakers(self, text):
-        if not shutil.which("mpv"):
-            raise EnvironmentError("mpv not found.")
-
+    async def _generate_audio(self, text, filename):
+        """Helper to generate audio file async"""
         communicate = edge_tts.Communicate(text, self.tts_voice)
-        
-        self.current_process = subprocess.Popen(
-            ["mpv", "--no-cache", "--no-terminal", "--", "-"],
-            stdin=subprocess.PIPE
-        )
+        await communicate.save(filename)
 
+    def synthesize(self, text):
+        """
+        Generates an audio file and returns the path.
+        Compatible with Web Deployment.
+        """
+        output_file = "response_audio.mp3"
         try:
-            async for chunk in communicate.stream():
-                if chunk["type"] == "audio":
-                    if self.current_process.stdin:
-                        self.current_process.stdin.write(chunk["data"])
-                        self.current_process.stdin.flush()
-        except Exception:
-            pass
-        finally:
-            if self.current_process and self.current_process.stdin:
-                self.current_process.stdin.close()
-            if self.current_process:
-                self.current_process.wait()
-            # Mark process as done so is_playing() returns False
-            self.current_process = None
+            # Run the async function in a blocking way for Streamlit
+            asyncio.run(self._generate_audio(text, output_file))
+            return output_file
+        except Exception as e:
+            print(f"[ERROR] TTS Failed: {e}")
+            return None
