@@ -68,7 +68,7 @@ st.markdown(
 if "history" not in st.session_state:
     st.session_state.history = []
 if "current_model" not in st.session_state:
-    st.session_state.current_model = "moonshotai/kimi-k2-instruct-0905"
+    st.session_state.current_model = "meta-llama/llama-4-scout-17b-16e-instruct"
 if "temp_input" not in st.session_state:
     st.session_state.temp_input = None
 if "audio_to_play" not in st.session_state:
@@ -114,7 +114,7 @@ with st.sidebar:
     
     # 2. Model Selection
     AVAILABLE_MODELS = {
-        "Kimi K2 (Moonshot)": "moonshotai/kimi-k2-instruct-0905",
+        "Llama 4 Scout 17B (Instruct)": "meta-llama/llama-4-scout-17b-16e-instruct",
         "Llama 3.1 8B": "llama-3.1-8b-instant",
         "GPT-OSS 20B": "openai/gpt-oss-20b",
         "Qwen 32B": "qwen/qwen3-32b"

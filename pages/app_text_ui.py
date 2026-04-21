@@ -15,7 +15,7 @@ DB_PATH = "db/faiss_store"
 
 # Supported Models
 AVAILABLE_MODELS = {
-    "Kimi K2 Instruct (Moonshot)": "moonshotai/kimi-k2-instruct-0905",
+    "Llama 4 Scout 17B (Instruct)": "meta-llama/llama-4-scout-17b-16e-instruct",
     "Llama 3.1 8B (Fastest)": "llama-3.1-8b-instant",
     "openai/gpt-oss-20b (Accurate)": "openai/gpt-oss-20b",
     "qwen/qwen3-32b-chat (Powerful)": "qwen/qwen3-32b"
