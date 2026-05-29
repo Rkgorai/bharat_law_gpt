@@ -207,6 +207,6 @@ marimo/_lsp/
 __marimo__/
 
 # Local App Data
-db/
+db/latest_draft.txt
 .vscode/
 .devcontainer/
