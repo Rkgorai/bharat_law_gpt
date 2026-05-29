@@ -1,6 +1,6 @@
 import os
 from dotenv import load_dotenv
-from src.hybrid_vectorstore import HybridVectorStore
+from src.rag.hybrid_vectorstore import HybridVectorStore
 from langchain_groq import ChatGroq
 
 load_dotenv()

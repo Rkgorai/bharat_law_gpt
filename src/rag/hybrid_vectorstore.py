@@ -5,7 +5,7 @@ import pickle
 from typing import List, Any, Dict
 from sentence_transformers import SentenceTransformer
 from rank_bm25 import BM25Okapi
-from src.embedding import EmbeddingPipeline
+from src.rag.embedding import EmbeddingPipeline
 
 class HybridVectorStore:
     """

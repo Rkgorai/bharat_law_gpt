@@ -1,7 +1,7 @@
 import shutil
 import os
-from src.data_loader import load_all_documents
-from src.hybrid_vectorstore import HybridVectorStore
+from src.rag.data_loader import load_all_documents
+from src.rag.hybrid_vectorstore import HybridVectorStore
 
 DATA_DIR = "legal_docs"
 DB_PATH = "db/faiss_store"

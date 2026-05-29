@@ -19,3 +19,9 @@ faster-whisper
 edge-tts 
 asyncio
 mutagen
+# duckduckgo-search
+torchvision
+torch
+ddgs
+fpdf2
+markdown
