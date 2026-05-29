@@ -13,7 +13,7 @@ from mutagen.mp3 import MP3
 from streamlit_mic_recorder import speech_to_text
 
 # IMPORT SHARED LOADERS (Crucial for performance)
-from src.shared import get_voice_handler, get_rag_engine
+from src.ui.dependencies import get_voice_handler, get_rag_engine
 
 # --- CONFIGURATION ---
 PAGE_TITLE = "Bharat Law - Voice Chat"
