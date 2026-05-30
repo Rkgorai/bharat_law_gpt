@@ -10,7 +10,7 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), ".")))
 from src.ui.dependencies import get_legal_agent, get_voice_handler
 from src.ui.pdf_utils import create_pdf
 from langchain_core.messages import HumanMessage, AIMessage
-from streamlit_mic_recorder import speech_to_text
+from streamlit_mic_recorder import mic_recorder
 from mutagen.mp3 import MP3
 
 # --- CONFIGURATION ---
@@ -34,6 +34,13 @@ if "audio_to_play" not in st.session_state:
     st.session_state.audio_to_play = None
 if "pending_query" not in st.session_state:
     st.session_state.pending_query = None
+if "pending_query_is_voice" not in st.session_state:
+    st.session_state.pending_query_is_voice = False
+if "last_input_was_voice" not in st.session_state:
+    st.session_state.last_input_was_voice = False
+if "last_processed_audio_id" not in st.session_state:
+    st.session_state.last_processed_audio_id = None
+
 
 # --- ADAPTIVE CSS & THEME INJECTION ---
 if st.session_state.theme == "dark":
@@ -126,7 +133,7 @@ div[data-testid="stHorizontalBlock"]:has(input[aria-label="Ask something..."]) {
     background-color: var(--bg-color) !important;
     border: 2px solid var(--border-color) !important;
     border-radius: 40px !important;
-    padding: 5px 25px !important;
+    padding: 5px 15px !important;
     box-shadow: var(--shadow) !important;
     z-index: 9999 !important;
     align-items: center !important;
@@ -155,7 +162,7 @@ div[data-testid="stHorizontalBlock"]:has(input[aria-label="Ask something..."]):f
     box-shadow: none !important;
 }}
 
-/* 8. Model Selector styling (No border, hover effect) */
+/* 8. Model Selector styling */
 .stSelectbox > div > div {{
     border: none !important;
     background-color: transparent !important;
@@ -170,11 +177,8 @@ div[data-testid="stHorizontalBlock"]:has(input[aria-label="Ask something..."]):f
 .stSelectbox > div > div:hover {{
     background-color: rgba(128, 128, 128, 0.1) !important;
 }}
-.stSelectbox label {{ display: none !important; }}
 
 /* 9. Custom Top Nav */
-div[data-testid="stHorizontalBlock"]:has(.gemini-header) {{
-    display: flex !important;
     flex-direction: row !important;
     flex-wrap: nowrap !important;
     align-items: center !important;
@@ -236,7 +240,9 @@ def submit_text_query():
     query = st.session_state.chat_input_box
     if query.strip():
         st.session_state.pending_query = query
+        st.session_state.pending_query_is_voice = st.session_state.get('last_input_was_voice', False)
         st.session_state.chat_input_box = "" # Clear input
+        st.session_state.last_input_was_voice = False
 
 def toggle_theme():
     st.session_state.theme = "dark" if st.session_state.theme == "light" else "light"
@@ -351,14 +357,128 @@ if st.session_state.audio_to_play:
 # 4. Handle Pending Query (from Text Input Enter)
 if st.session_state.pending_query:
     q = st.session_state.pending_query
+    is_voice = st.session_state.get('pending_query_is_voice', False)
     st.session_state.pending_query = None
-    process_query(q, use_voice=False)
+    st.session_state.pending_query_is_voice = False
+    process_query(q, use_voice=is_voice)
 
 # 5. Gemini-Style Big Oval Chatbar
 st.markdown('<span id="chatbar-marker"></span>', unsafe_allow_html=True)
 with st.container():
-    # New Column Layout: [Text Input, Model Selector, Mic Button]
-    col1, col2, col3 = st.columns([12, 3, 2])
+    col1, col2, col3, col4 = st.columns([10, 3, 1, 1])
+    
+    with col3:
+        if not st.session_state.audio_to_play:
+            audio_data = mic_recorder(
+                start_prompt=" ", 
+                stop_prompt="⏹️", 
+                just_once=True, 
+                use_container_width=True, 
+                key='gemini_mic'
+            )
+            
+            import streamlit.components.v1 as components
+            components.html("""
+            <script>
+            if (!parent.document.getElementById('chatbar-custom-styles')) {
+                const style = parent.document.createElement('style');
+                style.id = 'chatbar-custom-styles';
+                style.innerHTML = `
+                    .chatbar-block { align-items: center !important; }
+                    .chatbar-block > div[data-testid="column"] { display: flex !important; align-items: center !important; justify-content: center !important; }
+                    .chatbar-block > div[data-testid="column"]:nth-child(1) { justify-content: flex-start !important; }
+                    .chatbar-block > div[data-testid="column"] > div { margin-bottom: 0 !important; margin-top: 0 !important; }
+                    .chatbar-block > div[data-testid="column"]:nth-child(4) button { border-radius: 50% !important; width: 44px !important; height: 44px !important; background-color: #4285F4 !important; border: none !important; padding: 0 !important; display: flex !important; align-items: center !important; justify-content: center !important; transition: all 0.2s ease !important; }
+                    .chatbar-block > div[data-testid="column"]:nth-child(4) span.material-symbols-rounded { color: white !important; font-size: 24px !important; }
+                    .chatbar-block > div[data-testid="column"]:nth-child(4) { transition: all 0.2s ease !important; }
+                    .chatbar-block.chatbar-empty > div[data-testid="column"]:nth-child(4) { opacity: 0 !important; pointer-events: none !important; transform: scale(0.8) !important; }
+                `;
+                parent.document.head.appendChild(style);
+            }
+            const fixUI = () => {
+                try {
+                    const inputs = parent.document.querySelectorAll('input');
+                    let chatInput = null;
+                    for (let i = 0; i < inputs.length; i++) {
+                        if (inputs[i].placeholder === "Ask a legal question...") { chatInput = inputs[i]; break; }
+                    }
+                    if (!chatInput) return;
+                    let block = chatInput.closest('div[data-testid="stHorizontalBlock"]');
+                    if (block) {
+                        if (!block.classList.contains('chatbar-block')) { block.classList.add('chatbar-block'); }
+                        const updateSendBtn = () => {
+                            if (chatInput.value.trim() === '') { block.classList.add('chatbar-empty'); } else { block.classList.remove('chatbar-empty'); }
+                        };
+                        if (!chatInput.dataset.listenerAdded) {
+                            chatInput.addEventListener('input', updateSendBtn);
+                            chatInput.addEventListener('change', updateSendBtn);
+                            chatInput.dataset.listenerAdded = 'true';
+                        }
+                        updateSendBtn();
+                    }
+                    const iframes = parent.document.querySelectorAll('iframe[title*="streamlit_mic_recorder"]');
+                    iframes.forEach(iframe => {
+                        iframe.style.margin = '0';
+                        iframe.style.display = 'block';
+                        const doc = iframe.contentDocument || iframe.contentWindow.document;
+                        if (!doc) return;
+                        const btn = doc.querySelector('button');
+                        if (btn && btn.textContent.trim() === "") {
+                            btn.style.color = 'transparent';
+                            btn.style.backgroundImage = "url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyMCIgaGVpZ2h0PSIyMCIgdmlld0JveD0iMCAwIDI0IDI0IiBmaWxsPSJub25lIiBzdHJva2U9ImdyYXkiIHN0cm9rZS13aWR0aD0iMiIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBzdHJva2UtbGluZWpvaW49InJvdW5kIj48cGF0aCBkPSJNMTIgMmEzIDMgMCAwIDAtMyAzdjdhMyAzIDAgMCAwIDYgMFY1YTMgMyAwIDAgMC0zLTNaIi8+PHBhdGggZD0iTTE5IDEwdjJhNyA3IDAgMCAxLTE0IDB2LTIiLz48bGluZSB4MT0iMTIiIHgyPSIxMiIgeTE9IjE5IiB5Mj0iMjIiLz48L3N2Zz4=')";
+                            btn.style.backgroundRepeat = 'no-repeat';
+                            btn.style.backgroundPosition = 'center';
+                            btn.style.backgroundColor = 'transparent';
+                            btn.style.border = 'none';
+                            btn.style.boxShadow = 'none';
+                            btn.style.width = '44px';
+                            btn.style.height = '44px';
+                            btn.style.margin = '0 auto';
+                            btn.style.display = 'block';
+                        } else if (btn) {
+                            btn.style.color = 'transparent';
+                            btn.style.backgroundImage = "url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI0NCIgaGVpZ2h0PSI0NCIgdmlld0JveD0iMCAwIDQ0IDQ0Ij48cmVjdCB4PSIxMiIgeT0iMTQiIHdpZHRoPSIzIiBoZWlnaHQ9IjE2IiBmaWxsPSIjRUE0MzM1Ij48YW5pbWF0ZSBhdHRyaWJ1dGVOYW1lPSJ5IiB2YWx1ZXM9IjE0OzY7MTQiIGR1cj0iMC44cyIgcmVwZWF0Q291bnQ9ImluZGVmaW5pdGUiIC8+PGFuaW1hdGUgYXR0cmlidXRlTmFtZT0iaGVpZ2h0IiB2YWx1ZXM9IjE2OzMyOzE2IiBkdXI9IjAuOHMiIHJlcGVhdENvdW50PSJpbmRlZmluaXRlIiAvPjwvcmVjdD48cmVjdCB4PSIxOCIgeT0iMTgiIHdpZHRoPSIzIiBoZWlnaHQ9IjgiIGZpbGw9IiM0Mjg1RjQiPjxhbmltYXRlIGF0dHJpYnV0ZU5hbWU9InkiIHZhbHVlcz0iMTg7MTA7MTgiIGR1cj0iMC41cyIgcmVwZWF0Q291bnQ9ImluZGVmaW5pdGUiIC8+PGFuaW1hdGUgYXR0cmlidXRlTmFtZT0iaGVpZ2h0IiB2YWx1ZXM9Ijg7MjQ7OCIgZHVyPSIwLjVzIiByZXBlYXRDb3VudD0iaW5kZWZpbml0ZSIgLz48L3JlY3Q+PHJlY3QgeD0iMjQiIHk9IjE2IiB3aWR0aD0iMyIgaGVpZ2h0PSIxMiIgZmlsbD0iI0ZCQkMwNSI+PGFuaW1hdGUgYXR0cmlidXRlTmFtZT0ieSIgdmFsdWVzPSIxNjs4OzE2IiBkdXI9IjAuNnMiIHJlcGVhdENvdW50PSJpbmRlZmluaXRlIiAvPjxhbmltYXRlIGF0dHJpYnV0ZU5hbWU9ImhlaWdodCIgdmFsdWVzPSIxMjsyODsxMiIgZHVyPSIwLjZzIiByZXBlYXRDb3VudD0iaW5kZWZpbml0ZSIgLz48L3JlY3Q+PHJlY3QgeD0iMzAiIHk9IjEyIiB3aWR0aD0iMyIgaGVpZ2h0PSIyMCIgZmlsbD0iIzM0QTg1MyI+PGFuaW1hdGUgYXR0cmlidXRlTmFtZT0ieSIgdmFsdWVzPSIxMjs0OzEyIiBkdXI9IjAuN3MiIHJlcGVhdENvdW50PSJpbmRlZmluaXRlIiAvPjxhbmltYXRlIGF0dHJpYnV0ZU5hbWU9ImhlaWdodCIgdmFsdWVzPSIyMDszNjsyMCIgZHVyPSIwLjdzIiByZXBlYXRDb3VudD0iaW5kZWZpbml0ZSIgLz48L3JlY3Q+PC9zdmc+')";
+                            btn.style.backgroundRepeat = 'no-repeat';
+                            btn.style.backgroundPosition = 'center';
+                            btn.style.backgroundColor = 'transparent';
+                            btn.style.border = 'none';
+                            btn.style.boxShadow = 'none';
+                            btn.style.width = '44px';
+                            btn.style.height = '44px';
+                            btn.style.margin = '0 auto';
+                            btn.style.display = 'block';
+                            btn.style.cursor = 'pointer';
+                        }
+                    });
+                } catch(e) {}
+            };
+            fixUI();
+            setInterval(fixUI, 500);
+            </script>
+            """, height=0)
+            
+            if audio_data and 'bytes' in audio_data:
+                audio_id = audio_data.get('id')
+                if st.session_state.get('last_processed_audio_id') != audio_id:
+                    st.session_state.last_processed_audio_id = audio_id
+                    audio_bytes = audio_data['bytes']
+                    
+                    start_time = time.time()
+                    try:
+                        voice_handler = get_voice_handler()
+                        transcription = voice_handler.transcribe(audio_bytes)
+                        duration = time.time() - start_time
+                        
+                        if transcription and transcription.strip():
+                            # Print STT result directly to cmd/terminal as requested
+                            print(f"[STT] Model Result: \"{transcription}\" (duration: {duration:.2f}s, device: CPU)")
+                            st.session_state.chat_input_box = transcription
+                            st.session_state.last_input_was_voice = True
+                            st.rerun()
+                        else:
+                            print(f"[STT] Model Result: Empty/No voice detected (duration: {duration:.2f}s)")
+                    except Exception as e:
+                        print(f"[STT] Model Exception: {str(e)}")
     
     with col1:
         st.text_input(
@@ -387,16 +507,6 @@ with st.container():
             st.session_state.agent_system = None
             st.rerun()
 
-    with col3:
-        if not st.session_state.audio_to_play:
-            voice_text = speech_to_text(
-                language='en', 
-                start_prompt="Speak", 
-                stop_prompt="Stop", 
-                just_once=True, 
-                use_container_width=True, 
-                key='gemini_mic'
-            )
-            if voice_text and voice_text.strip():
-                st.session_state.pending_query = voice_text
-                st.rerun()
+    with col4:
+        # Send action triggered via on_click callback to prevent modifying state during render
+        st.button(" ", key="send_btn_ui", icon=":material/arrow_upward:", on_click=submit_text_query)

@@ -7,6 +7,11 @@ from sentence_transformers import SentenceTransformer
 from rank_bm25 import BM25Okapi
 from src.rag.embedding import EmbeddingPipeline
 
+def _log(msg: str):
+    if os.environ.get("BHARAT_LAW_VERBOSE") == "1":
+        print(msg)
+
+
 class HybridVectorStore:
     """
     Hybrid search combining BM25 (keyword-based) and FAISS (semantic vector search).
@@ -55,12 +60,12 @@ class HybridVectorStore:
         self.bm25_weight = bm25_weight
         self.vector_weight = vector_weight
         
-        print(f"[INFO] Initialized Hybrid Vector Store with embedding model: {embedding_model}")
-        print(f"[INFO] BM25 weight: {bm25_weight}, Vector weight: {vector_weight}")
+        _log(f"[INFO] Initialized Hybrid Vector Store with embedding model: {embedding_model}")
+        _log(f"[INFO] BM25 weight: {bm25_weight}, Vector weight: {vector_weight}")
 
     def build_from_documents(self, documents: List[Any]):
         """Build both BM25 and vector indexes from documents."""
-        print(f"[INFO] Building hybrid store from {len(documents)} raw documents...")
+        _log(f"[INFO] Building hybrid store from {len(documents)} raw documents...")
         emb_pipe = EmbeddingPipeline(
             model_name=self.embedding_model, 
             chunk_size=self.chunk_size, 
@@ -69,7 +74,7 @@ class HybridVectorStore:
         
         # 1. Chunk documents
         chunks = emb_pipe.chunk_documents(documents)
-        print(f"[INFO] Created {len(chunks)} chunks")
+        _log(f"[INFO] Created {len(chunks)} chunks")
         
         # 2. Generate embeddings for vector search
         embeddings = emb_pipe.embed_chunks(chunks)
@@ -85,18 +90,18 @@ class HybridVectorStore:
             self.corpus_texts.append(chunk.page_content)
         
         # 4. Build BM25 index
-        print("[INFO] Building BM25 index...")
+        _log("[INFO] Building BM25 index...")
         self.tokenized_corpus = [self._tokenize(text) for text in self.corpus_texts]
         self.bm25 = BM25Okapi(self.tokenized_corpus)
-        print(f"[INFO] BM25 index built with {len(self.tokenized_corpus)} documents")
+        _log(f"[INFO] BM25 index built with {len(self.tokenized_corpus)} documents")
         
         # 5. Build FAISS vector index
-        print("[INFO] Building FAISS vector index...")
+        _log("[INFO] Building FAISS vector index...")
         self.add_embeddings(np.array(embeddings).astype('float32'), metadatas)
         
         # 6. Save everything
         self.save()
-        print(f"[INFO] Hybrid store built and saved to {self.persist_dir}")
+        _log(f"[INFO] Hybrid store built and saved to {self.persist_dir}")
 
     def _tokenize(self, text: str) -> List[str]:
         """Simple tokenization for BM25."""
@@ -111,7 +116,7 @@ class HybridVectorStore:
         self.index.add(embeddings)
         if metadatas:
             self.metadata.extend(metadatas)
-        print(f"[INFO] Added {embeddings.shape[0]} vectors to FAISS index")
+        _log(f"[INFO] Added {embeddings.shape[0]} vectors to FAISS index")
 
     def save(self):
         """Save all components to disk."""
@@ -138,7 +143,7 @@ class HybridVectorStore:
         with open(corpus_path, "wb") as f:
             pickle.dump(self.corpus_texts, f)
         
-        print(f"[INFO] Saved hybrid store (FAISS + BM25) to {self.persist_dir}")
+        _log(f"[INFO] Saved hybrid store (FAISS + BM25) to {self.persist_dir}")
 
     def load(self):
         """Load all components from disk."""
@@ -150,13 +155,13 @@ class HybridVectorStore:
         # Load FAISS index
         if os.path.exists(faiss_path):
             self.index = faiss.read_index(faiss_path)
-            print(f"[INFO] Loaded FAISS index with {self.index.ntotal} vectors")
+            _log(f"[INFO] Loaded FAISS index with {self.index.ntotal} vectors")
         
         # Load metadata
         if os.path.exists(meta_path):
             with open(meta_path, "rb") as f:
                 self.metadata = pickle.load(f)
-            print(f"[INFO] Loaded {len(self.metadata)} metadata entries")
+            _log(f"[INFO] Loaded {len(self.metadata)} metadata entries")
         
         # Load BM25
         if os.path.exists(bm25_path):
@@ -164,7 +169,7 @@ class HybridVectorStore:
                 bm25_data = pickle.load(f)
                 self.bm25 = bm25_data["bm25"]
                 self.tokenized_corpus = bm25_data["tokenized_corpus"]
-            print(f"[INFO] Loaded BM25 index with {len(self.tokenized_corpus)} documents")
+            _log(f"[INFO] Loaded BM25 index with {len(self.tokenized_corpus)} documents")
         
         # Load corpus texts
         if os.path.exists(corpus_path):
@@ -222,7 +227,7 @@ class HybridVectorStore:
         Returns:
             List of results with combined scores
         """
-        print(f"[INFO] Performing hybrid search for: '{query_text}'")
+        _log(f"[INFO] Performing hybrid search for: '{query_text}'")
         
         # Get more candidates from each method
         candidate_k = top_k * 3
@@ -284,7 +289,7 @@ class HybridVectorStore:
                 "metadata": data["metadata"]
             })
         
-        print(f"[INFO] Hybrid search returned {len(final_results)} results")
+        _log(f"[INFO] Hybrid search returned {len(final_results)} results")
         return final_results
 
     def query(self, query_text: str, top_k: int = 5) -> List[Dict]:

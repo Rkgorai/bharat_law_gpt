@@ -5,7 +5,8 @@ import edge_tts
 
 class VoiceHandler:
     def __init__(self):
-        print("[INFO] Initializing Voice Models...")
+        if os.environ.get("BHARAT_LAW_VERBOSE") == "1":
+            print("[INFO] Initializing Voice Models...")
         
         # --- LAZY IMPORT ---
         # This prevents the app from hanging just by importing this file
