@@ -1,7 +1,7 @@
 import os
 import asyncio
 import edge_tts
-# REMOVED: from faster_whisper import WhisperModel (Moved inside class)
+import uuid
 
 class VoiceHandler:
     def __init__(self):
@@ -17,7 +17,8 @@ class VoiceHandler:
         self.tts_voice = "en-IN-NeerjaNeural" 
 
     def transcribe(self, audio_bytes):
-        temp_filename = "temp_input.wav"
+        os.makedirs("db/recordings", exist_ok=True)
+        temp_filename = f"db/recordings/temp_{uuid.uuid4().hex}.wav"
         with open(temp_filename, "wb") as f:
             f.write(audio_bytes)
         try:
@@ -26,13 +27,20 @@ class VoiceHandler:
         except Exception as e:
             print(f"[ERROR] STT Failed: {e}")
             return None
+        finally:
+            if os.path.exists(temp_filename):
+                try:
+                    os.remove(temp_filename)
+                except Exception:
+                    pass
 
     async def _generate_audio(self, text, filename):
         communicate = edge_tts.Communicate(text, self.tts_voice)
         await communicate.save(filename)
 
     def synthesize(self, text):
-        output_file = "response_audio.mp3"
+        os.makedirs("db/recordings", exist_ok=True)
+        output_file = f"db/recordings/{uuid.uuid4().hex}.mp3"
         try:
             asyncio.run(self._generate_audio(text, output_file))
             return output_file
