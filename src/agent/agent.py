@@ -29,7 +29,7 @@ class LocalSearchWrapper:
             return "No relevant information found in the local legal database."
         return "\n\n".join(texts)
 
-_local_search = LocalSearchWrapper()
+_local_search = None
 
 @tool
 def local_rag_search(query: str) -> str:
@@ -37,6 +37,9 @@ def local_rag_search(query: str) -> str:
     Search the local Bharat Law database for Indian legal documents, bare acts, IPC sections, and legal definitions.
     Use this tool FIRST for any question about Indian laws or legal facts.
     """
+    global _local_search
+    if _local_search is None:
+        _local_search = LocalSearchWrapper()
     return _local_search.search(query)
 
 @tool

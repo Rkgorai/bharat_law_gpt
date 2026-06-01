@@ -23,7 +23,7 @@ AVAILABLE_MODELS = {
 
 def initialize_session_state():
     if "theme" not in st.session_state:
-        st.session_state.theme = "light"
+        st.session_state.theme = "system"
     if "messages" not in st.session_state:
         cleanup_recordings()
         st.session_state.messages = []

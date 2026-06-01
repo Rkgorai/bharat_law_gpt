@@ -176,6 +176,18 @@ def render_dictation_mic():
             isListening = true;
             btn.classList.add('listening');
             icon.textContent = 'stop';
+            try {
+                parent.postMessage({ type: 'voice-active', active: true }, '*');
+            } catch (e) {}
+            try {
+                const chatInput = parent.document.querySelector('input[placeholder="Ask a legal question..."]');
+                if (chatInput) {
+                    let block = chatInput.closest('div[data-testid="stHorizontalBlock"]');
+                    if (block) {
+                        block.classList.add('voice-active');
+                    }
+                }
+            } catch (e) {}
         };
 
         recognition.onresult = (event) => {
@@ -227,10 +239,17 @@ def render_dictation_mic():
         finalTranscript = '';
         
         try {
+            parent.postMessage({ type: 'voice-active', active: true }, '*');
+        } catch (e) {}
+        try {
             // Safely clear the parent input box before dictating starts
             const chatInput = parent.document.querySelector('input[placeholder="Ask a legal question..."]');
             if (chatInput) {
                 setReactInputValue(chatInput, '');
+                let block = chatInput.closest('div[data-testid="stHorizontalBlock"]');
+                if (block) {
+                    block.classList.add('voice-active');
+                }
             }
         } catch (e) {
             console.warn("[STT] Input clear blocked by CORS: ", e);
@@ -249,6 +268,18 @@ def render_dictation_mic():
         icon.textContent = 'mic';
         try {
             recognition.stop();
+        } catch (e) {}
+        try {
+            parent.postMessage({ type: 'voice-active', active: false }, '*');
+        } catch (e) {}
+        try {
+            const chatInput = parent.document.querySelector('input[placeholder="Ask a legal question..."]');
+            if (chatInput) {
+                let block = chatInput.closest('div[data-testid="stHorizontalBlock"]');
+                if (block) {
+                    block.classList.remove('voice-active');
+                }
+            }
         } catch (e) {}
         
         fixParentUI();

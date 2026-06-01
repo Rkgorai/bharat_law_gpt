@@ -2,18 +2,13 @@ import os
 import asyncio
 import edge_tts
 import uuid
+import hashlib
 
 class VoiceHandler:
     def __init__(self):
         if os.environ.get("BHARAT_LAW_VERBOSE") == "1":
             print("[INFO] Initializing Voice Models...")
-        
-        # --- LAZY IMPORT ---
-        # This prevents the app from hanging just by importing this file
-        from faster_whisper import WhisperModel
-        
-        # Initialize Model
-        self.stt_model = WhisperModel("tiny", device="cpu", compute_type="int8")
+        self.stt_model = None
         self.tts_voice = "en-IN-NeerjaNeural" 
 
     def transcribe(self, audio_bytes):
@@ -22,6 +17,12 @@ class VoiceHandler:
         with open(temp_filename, "wb") as f:
             f.write(audio_bytes)
         try:
+            if self.stt_model is None:
+                from faster_whisper import WhisperModel
+                if os.environ.get("BHARAT_LAW_VERBOSE") == "1":
+                    print("[INFO] Loading Whisper STT Model...")
+                self.stt_model = WhisperModel("tiny", device="cpu", compute_type="int8")
+                
             segments, info = self.stt_model.transcribe(temp_filename, beam_size=5)
             return " ".join([segment.text for segment in segments]).strip()
         except Exception as e:
@@ -39,10 +40,24 @@ class VoiceHandler:
         await communicate.save(filename)
 
     def synthesize(self, text):
-        os.makedirs("db/recordings", exist_ok=True)
-        output_file = f"db/recordings/{uuid.uuid4().hex}.mp3"
+        # We store synthesized TTS files in a separate 'db/tts_cache' directory
+        # so they survive session cleanups and are reused across sessions!
+        os.makedirs("db/tts_cache", exist_ok=True)
+        
+        # Stable cache key using stable SHA-256 hash of the text content
+        text_hash = hashlib.sha256(text.encode('utf-8')).hexdigest()
+        output_file = f"db/tts_cache/{text_hash}.mp3"
+        
+        # TTS Cache Hit: If already synthesized, skip edge-tts API network request!
+        if os.path.exists(output_file) and os.path.getsize(output_file) > 0:
+            if os.environ.get("BHARAT_LAW_VERBOSE") == "1":
+                print(f"[INFO] TTS Cache Hit: {output_file}")
+            return output_file
+            
         try:
             asyncio.run(self._generate_audio(text, output_file))
+            if os.environ.get("BHARAT_LAW_VERBOSE") == "1":
+                print(f"[INFO] TTS Cache Miss. Synthesized: {output_file}")
             return output_file
         except Exception as e:
             print(f"[ERROR] TTS Failed: {e}")
