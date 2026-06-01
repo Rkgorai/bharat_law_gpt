@@ -149,23 +149,35 @@ def process_query(query: str, use_voice: bool = False):
                             if getattr(msg, "type", "") == "ai" and msg.content:
                                 answer_text += msg.content
                                 
+            # First, collapse the thinking status container cleanly and instantly
             status_container.update(label="Complete", state="complete", expanded=False)
             
             if answer_text:
-                # Pre-synthesize the voice audio for this message immediately for instant playback!
+                # 1. Render the text response instantly
+                message_placeholder = st.empty()
+                message_placeholder.markdown(answer_text)
+                
+                # 2. Append to messages history immediately (audio_path=None initially)
+                st.session_state.messages.append({
+                    "role": "assistant", 
+                    "content": answer_text,
+                    "audio_path": None
+                })
+                
+                # 3. Perform text-to-speech synthesis (synchronous, takes 2-3 seconds)
                 audio_path = None
                 try:
                     voice_handler = get_voice_handler()
                     audio_path = voice_handler.synthesize(answer_text)
+                    # Cache the synthesized audio path in the saved history message
+                    st.session_state.messages[-1]["audio_path"] = audio_path
                 except Exception as tts_err:
                     print(f"[ERROR] Pre-synthesis failed: {tts_err}")
 
-                st.session_state.messages.append({
-                    "role": "assistant", 
-                    "content": answer_text,
-                    "audio_path": audio_path
-                })
-                st.markdown(answer_text)
+                # 4. If voice mode is active, trigger autoplay immediately!
+                if use_voice and audio_path:
+                    st.session_state.audio_to_play = audio_path
+                    st.rerun()
                         
         except Exception as e:
             status_container.update(label="Error Occurred", state="error", expanded=True)

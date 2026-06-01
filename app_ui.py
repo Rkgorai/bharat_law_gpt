@@ -19,6 +19,7 @@ from src.ui.chat_handler import (
 )
 from src.ui.styles import inject_custom_styles
 from src.ui.voice_dictation import render_dictation_mic
+from src.ui.send_button import render_send_button
 
 # --- CONFIGURATION ---
 PAGE_TITLE = "Bharat Law GPT"
@@ -91,5 +92,6 @@ with st.container():
             st.rerun()
 
     with col4:
-        # Trigger query submission safely via Python on_click callback
-        st.button(" ", key="send_btn_ui", icon=":material/arrow_upward:", on_click=submit_text_query)
+        render_send_button()
+
+# Hot reload trigger to clear Streamlit module cache and load new mobile styles (v9)

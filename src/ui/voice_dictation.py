@@ -5,7 +5,7 @@ def render_dictation_mic():
     """
     Renders the HTML/JS real-time Speech Dictation button widget inside the column.
     """
-    components.html("""
+    st.iframe("""
     <!DOCTYPE html>
     <html>
     <head>
@@ -97,21 +97,25 @@ def render_dictation_mic():
         }
     };
 
-    // Inject Custom Styles to Parent once
-    if (!parent.document.getElementById('chatbar-custom-styles')) {
-        const style = parent.document.createElement('style');
-        style.id = 'chatbar-custom-styles';
-        style.innerHTML = `
-            .chatbar-block { align-items: center !important; }
-            .chatbar-block > div[data-testid="column"] { display: flex !important; align-items: center !important; justify-content: center !important; }
-            .chatbar-block > div[data-testid="column"]:nth-child(1) { justify-content: flex-start !important; }
-            .chatbar-block > div[data-testid="column"] > div { margin-bottom: 0 !important; margin-top: 0 !important; }
-            .chatbar-block > div[data-testid="column"]:nth-child(4) button { border-radius: 50% !important; width: 44px !important; height: 44px !important; background-color: #4285F4 !important; border: none !important; padding: 0 !important; display: flex !important; align-items: center !important; justify-content: center !important; transition: all 0.2s ease !important; }
-            .chatbar-block > div[data-testid="column"]:nth-child(4) span.material-symbols-rounded { color: white !important; font-size: 24px !important; }
-            .chatbar-block > div[data-testid="column"]:nth-child(4) { transition: all 0.2s ease !important; }
-            .chatbar-block.chatbar-empty > div[data-testid="column"]:nth-child(4) { opacity: 0 !important; pointer-events: none !important; transform: scale(0.8) !important; }
-        `;
-        parent.document.head.appendChild(style);
+    try {
+        // Inject Custom Styles to Parent once
+        if (!parent.document.getElementById('chatbar-custom-styles')) {
+            const style = parent.document.createElement('style');
+            style.id = 'chatbar-custom-styles';
+            style.innerHTML = `
+                .chatbar-block { align-items: center !important; }
+                .chatbar-block > div[data-testid="column"] { display: flex !important; align-items: center !important; justify-content: center !important; }
+                .chatbar-block > div[data-testid="column"]:nth-child(1) { justify-content: flex-start !important; }
+                .chatbar-block > div[data-testid="column"] > div { margin-bottom: 0 !important; margin-top: 0 !important; }
+                .chatbar-block > div[data-testid="column"]:nth-child(4) button { border-radius: 50% !important; width: 44px !important; height: 44px !important; background-color: #4285F4 !important; border: none !important; padding: 0 !important; display: flex !important; align-items: center !important; justify-content: center !important; transition: all 0.2s ease !important; }
+                .chatbar-block > div[data-testid="column"]:nth-child(4) span.material-symbols-rounded { color: white !important; font-size: 24px !important; }
+                .chatbar-block > div[data-testid="column"]:nth-child(4) { transition: all 0.2s ease !important; }
+                .chatbar-block.chatbar-empty > div[data-testid="column"]:nth-child(4) { opacity: 0 !important; pointer-events: none !important; transform: scale(0.8) !important; }
+            `;
+            parent.document.head.appendChild(style);
+        }
+    } catch (e) {
+        console.warn("[STT] Parent document style injection blocked by CORS: ", e);
     }
 
     // Fix visual parent alignment for the input pill
@@ -146,13 +150,21 @@ def render_dictation_mic():
                 });
                 sendBtn.dataset.listenerAdded = 'true';
             }
-        } catch(e) {}
+        } catch (e) {
+            console.warn("[STT] fixParentUI blocked by CORS: ", e);
+        }
     };
     fixParentUI();
     setInterval(fixParentUI, 500);
 
-    // Use parent window to bypass sandboxed iframe microphone permission limits
-    const SpeechRecognition = parent.window.SpeechRecognition || parent.window.webkitSpeechRecognition || window.SpeechRecognition || window.webkitSpeechRecognition;
+    // Use parent window to bypass sandboxed iframe microphone permission limits, with local fallback
+    let SpeechRecognition = null;
+    try {
+        SpeechRecognition = parent.window.SpeechRecognition || parent.window.webkitSpeechRecognition || window.SpeechRecognition || window.webkitSpeechRecognition;
+    } catch (e) {
+        console.warn("[STT] Parent window access blocked by CORS, falling back to local iframe window: ", e);
+        SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    }
     
     if (SpeechRecognition) {
         recognition = new SpeechRecognition();
@@ -181,15 +193,19 @@ def render_dictation_mic():
                 finalTranscript += currentFinal + ' ';
             }
             
-            const textToShow = (finalTranscript + interimTranscript).trim() + '\\u200b';
+            const textToShow = (finalTranscript + interimTranscript).trim() + '\u200b';
             
-            // Safely update parent input box using our custom React state synchronizer!
-            const chatInput = parent.document.querySelector('input[placeholder="Ask a legal question..."]');
-            if (chatInput) {
-                setReactInputValue(chatInput, textToShow);
-                
-                // Force parent UI Send button visibility update
-                fixParentUI();
+            try {
+                // Safely update parent input box using our custom React state synchronizer!
+                const chatInput = parent.document.querySelector('input[placeholder="Ask a legal question..."]');
+                if (chatInput) {
+                    setReactInputValue(chatInput, textToShow);
+                    
+                    // Force parent UI Send button visibility update
+                    fixParentUI();
+                }
+            } catch (e) {
+                console.warn("[STT] Input value update blocked by CORS: ", e);
             }
         };
 
@@ -210,10 +226,14 @@ def render_dictation_mic():
         if (!recognition) return;
         finalTranscript = '';
         
-        // Safely clear the parent input box before dictating starts using our custom React state synchronizer!
-        const chatInput = parent.document.querySelector('input[placeholder="Ask a legal question..."]');
-        if (chatInput) {
-            setReactInputValue(chatInput, '');
+        try {
+            // Safely clear the parent input box before dictating starts
+            const chatInput = parent.document.querySelector('input[placeholder="Ask a legal question..."]');
+            if (chatInput) {
+                setReactInputValue(chatInput, '');
+            }
+        } catch (e) {
+            console.warn("[STT] Input clear blocked by CORS: ", e);
         }
         try {
             recognition.start();

@@ -4,14 +4,14 @@ def get_theme_css():
     if st.session_state.get("theme", "light") == "dark":
         return """
         :root {
-            --bg-color: #131314;
+            --bg-color: #10121a;
             --text-color: #e3e3e3;
-            --chat-user: #282a2c;
-            --chat-bot: #1e1f20;
-            --border-color: #3c4043;
-            --shadow: 0 4px 15px rgba(0,0,0,0.5);
-            --gradient-start: #000000;
-            --gradient-end: #131314;
+            --chat-user: #1f2230;
+            --chat-bot: #12141c;
+            --border-color: #262936;
+            --shadow: 0 4px 15px rgba(0,0,0,0.4);
+            --gradient-start: #0c0d12;
+            --gradient-end: #161822;
         }
         """
     else:
@@ -19,12 +19,12 @@ def get_theme_css():
         :root {
             --bg-color: #ffffff;
             --text-color: #202124;
-            --chat-user: #e3f2fd;
+            --chat-user: #e3effb;
             --chat-bot: #ffffff;
-            --border-color: #dadce0;
-            --shadow: 0 4px 15px rgba(0,0,0,0.1);
-            --gradient-start: #e8f0fe;
-            --gradient-end: #ffffff;
+            --border-color: #e2e6f0;
+            --shadow: 0 4px 15px rgba(0,0,0,0.06);
+            --gradient-start: #eff3f9;
+            --gradient-end: #fafbfe;
         }
         """
 
@@ -44,6 +44,16 @@ div[data-testid="column"]:nth-child(3) iframe {{
     margin: 0 auto !important;
 }}
 
+/* Custom send button iframe centring in column 4 */
+div[data-testid="column"]:nth-child(4) iframe {{
+    width: 44px !important;
+    height: 44px !important;
+    border: none !important;
+    overflow: hidden !important;
+    display: block !important;
+    margin: 0 auto !important;
+}}
+
 /* Hide programmatic voice active checkbox */
 div[data-testid="stCheckbox"]:has(input[aria-label="Voice Active"]) {{
     display: none !important;
@@ -55,9 +65,16 @@ div[data-testid="stCheckbox"]:has(input[aria-label="Voice Active"]) {{
 }}
 
 /* 2. Base App Styling */
-.stApp {{
-    background: linear-gradient(135deg, var(--gradient-start) 0%, var(--gradient-end) 100%);
+.stApp, [data-testid="stAppViewContainer"] {{
+    background: linear-gradient(135deg, var(--gradient-start) 0%, var(--gradient-end) 100%) !important;
     color: var(--text-color) !important;
+}}
+[data-testid="stMainViewContainer"], 
+[data-testid="stMain"], 
+.main, 
+.stAppHeader {{
+    background: transparent !important;
+    background-color: transparent !important;
 }}
 .stApp * {{
     color: var(--text-color);
@@ -97,8 +114,8 @@ div[data-testid="stCheckbox"]:has(input[aria-label="Voice Active"]) {{
     color: var(--text-color) !important;
 }}
 
-/* 6. GUARANTEED FIXED OVAL CHATBAR USING :has() */
-div[data-testid="stHorizontalBlock"]:has(input[aria-label="Ask something..."]) {{
+/* 6. GUARANTEED FIXED OVAL CHATBAR - SEPARATED SELECTORS TO PREVENT BROWSER CANCELLATIONS */
+div[data-testid="stHorizontalBlock"]:has(input[placeholder^="Ask a legal question"]) {{
     position: fixed !important;
     bottom: 25px !important;
     left: 50% !important;
@@ -113,7 +130,27 @@ div[data-testid="stHorizontalBlock"]:has(input[aria-label="Ask something..."]) {
     z-index: 9999 !important;
     align-items: center !important;
 }}
-div[data-testid="stHorizontalBlock"]:has(input[aria-label="Ask something..."]):focus-within {{
+div.chatbar-block {{
+    position: fixed !important;
+    bottom: 25px !important;
+    left: 50% !important;
+    transform: translateX(-50%) !important;
+    width: 90% !important;
+    max-width: 1000px !important;
+    background-color: var(--bg-color) !important;
+    border: 2px solid var(--border-color) !important;
+    border-radius: 40px !important;
+    padding: 5px 15px !important;
+    box-shadow: var(--shadow) !important;
+    z-index: 9999 !important;
+    align-items: center !important;
+}}
+
+div[data-testid="stHorizontalBlock"]:has(input[placeholder^="Ask a legal question"]):focus-within {{
+    border-color: #4285F4 !important;
+    box-shadow: 0 0 0 1px #4285F4 !important;
+}}
+div.chatbar-block:focus-within {{
     border-color: #4285F4 !important;
     box-shadow: 0 0 0 1px #4285F4 !important;
 }}
@@ -215,13 +252,194 @@ button[key^="play_voice_"]:hover, button[key^="stop_voice_"]:hover {{
 }}
 
 /* Force the parent Streamlit element-container of the play/stop buttons to push to the right side of the bubble */
-div[data-testid="element-container"]:has(button[key^="play_voice_"]),
+div[data-testid="element-container"]:has(button[key^="play_voice_"]) {{
+    display: flex !important;
+    justify-content: flex-end !important;
+    width: 100% !important;
+    margin-top: 10px !important;
+    margin-bottom: 5px !important;
+}}
 div[data-testid="element-container"]:has(button[key^="stop_voice_"]) {{
     display: flex !important;
     justify-content: flex-end !important;
     width: 100% !important;
     margin-top: 10px !important;
     margin-bottom: 5px !important;
+}}
+
+/* 11. Responsive Mobile View Overrides (width <= 950px) - SEPARATED SELECTION TO BYPASS BROWSER CORS/HAS EXCEPTIONS */
+@media (max-width: 950px) {{
+    /* Force the chatbar horizontal block to remain a single flex row (no vertical wrapping!) */
+    div[data-testid="stHorizontalBlock"]:has(input[placeholder^="Ask a legal question"]) {{
+        display: flex !important;
+        flex-direction: row !important;
+        flex-wrap: nowrap !important;
+        align-items: center !important;
+        justify-content: space-between !important;
+        width: 95% !important;
+        padding: 5px 10px !important;
+        border-radius: 40px !important;
+        gap: 0px !important;
+    }}
+    div.chatbar-block {{
+        display: flex !important;
+        flex-direction: row !important;
+        flex-wrap: nowrap !important;
+        align-items: center !important;
+        justify-content: space-between !important;
+        width: 95% !important;
+        padding: 5px 10px !important;
+        border-radius: 40px !important;
+        gap: 0px !important;
+    }}
+    
+    /* Hide the 2nd column (Model Selector) completely on mobile */
+    div[data-testid="stHorizontalBlock"]:has(input[placeholder^="Ask a legal question"]) > div[data-testid="column"]:nth-child(2) {{
+        display: none !important;
+        width: 0px !important;
+        flex: 0 0 0px !important;
+        max-width: 0px !important;
+        margin: 0 !important;
+        padding: 0 !important;
+    }}
+    div.chatbar-block > div[data-testid="column"]:nth-child(2) {{
+        display: none !important;
+        width: 0px !important;
+        flex: 0 0 0px !important;
+        max-width: 0px !important;
+        margin: 0 !important;
+        padding: 0 !important;
+    }}
+    
+    /* Force the text input column to take up all remaining left-side width using flex-grow */
+    div[data-testid="stHorizontalBlock"]:has(input[placeholder^="Ask a legal question"]) > div[data-testid="column"]:nth-child(1) {{
+        flex: 1 1 0% !important;
+        width: auto !important;
+        min-width: 0 !important;
+        margin: 0 !important;
+        padding: 0 !important;
+    }}
+    div.chatbar-block > div[data-testid="column"]:nth-child(1) {{
+        flex: 1 1 0% !important;
+        width: auto !important;
+        min-width: 0 !important;
+        margin: 0 !important;
+        padding: 0 !important;
+    }}
+    
+    /* Force the mic (3rd col) and send button (4th col) to stay side-by-side on the right */
+    div[data-testid="stHorizontalBlock"]:has(input[placeholder^="Ask a legal question"]) > div[data-testid="column"]:nth-child(3) {{
+        width: 44px !important;
+        flex: 0 0 44px !important;
+        max-width: 44px !important;
+        margin-left: 6px !important;
+        margin-right: 0 !important;
+        margin-top: 0 !important;
+        margin-bottom: 0 !important;
+        padding: 0 !important;
+    }}
+    div.chatbar-block > div[data-testid="column"]:nth-child(3) {{
+        width: 44px !important;
+        flex: 0 0 44px !important;
+        max-width: 44px !important;
+        margin-left: 6px !important;
+        margin-right: 0 !important;
+        margin-top: 0 !important;
+        margin-bottom: 0 !important;
+        padding: 0 !important;
+    }}
+
+    div[data-testid="stHorizontalBlock"]:has(input[placeholder^="Ask a legal question"]) > div[data-testid="column"]:nth-child(4) {{
+        width: 44px !important;
+        flex: 0 0 44px !important;
+        max-width: 44px !important;
+        margin-left: 6px !important;
+        margin-right: 0 !important;
+        margin-top: 0 !important;
+        margin-bottom: 0 !important;
+        padding: 0 !important;
+    }}
+    div.chatbar-block > div[data-testid="column"]:nth-child(4) {{
+        width: 44px !important;
+        flex: 0 0 44px !important;
+        max-width: 44px !important;
+        margin-left: 6px !important;
+        margin-right: 0 !important;
+        margin-top: 0 !important;
+        margin-bottom: 0 !important;
+        padding: 0 !important;
+    }}
+}}
+
+/* 12. Robust Parent-Level Styling for the Big Oval Chatbar Elements - SEPARATED SELECTORS */
+div[data-testid="stHorizontalBlock"]:has(input[placeholder^="Ask a legal question"]) > div[data-testid="column"]:nth-child(4) button {{
+    border-radius: 50% !important;
+    width: 44px !important;
+    height: 44px !important;
+    background-color: #4285F4 !important;
+    border: none !important;
+    padding: 0 !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    transition: all 0.2s ease !important;
+    box-shadow: none !important;
+}}
+div.chatbar-block > div[data-testid="column"]:nth-child(4) button {{
+    border-radius: 50% !important;
+    width: 44px !important;
+    height: 44px !important;
+    background-color: #4285F4 !important;
+    border: none !important;
+    padding: 0 !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    transition: all 0.2s ease !important;
+    box-shadow: none !important;
+}}
+
+div[data-testid="stHorizontalBlock"]:has(input[placeholder^="Ask a legal question"]) > div[data-testid="column"]:nth-child(4) button:hover {{
+    background-color: #357ae8 !important;
+    transform: scale(1.05) !important;
+}}
+div.chatbar-block > div[data-testid="column"]:nth-child(4) button:hover {{
+    background-color: #357ae8 !important;
+    transform: scale(1.05) !important;
+}}
+
+div[data-testid="stHorizontalBlock"]:has(input[placeholder^="Ask a legal question"]) > div[data-testid="column"]:nth-child(4) button * {{
+    color: white !important;
+}}
+div.chatbar-block > div[data-testid="column"]:nth-child(4) button * {{
+    color: white !important;
+}}
+
+div[data-testid="stHorizontalBlock"]:has(input[placeholder^="Ask a legal question"]) > div[data-testid="column"] {{
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+}}
+div.chatbar-block > div[data-testid="column"] {{
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+}}
+
+div[data-testid="stHorizontalBlock"]:has(input[placeholder^="Ask a legal question"]) > div[data-testid="column"]:nth-child(1) {{
+    justify-content: flex-start !important;
+}}
+div.chatbar-block > div[data-testid="column"]:nth-child(1) {{
+    justify-content: flex-start !important;
+}}
+
+div[data-testid="stHorizontalBlock"]:has(input[placeholder^="Ask a legal question"]) > div[data-testid="column"] > div {{
+    margin-top: 0 !important;
+    margin-bottom: 0 !important;
+}}
+div.chatbar-block > div[data-testid="column"] > div {{
+    margin-top: 0 !important;
+    margin-bottom: 0 !important;
 }}
 </style>
 """, unsafe_allow_html=True)
