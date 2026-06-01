@@ -12,9 +12,9 @@ This makes the system:
 - **More useful** (Automatically asks for missing facts and drafts full legal documents)
 - **Highly secure** (Strict system guardrails aggressively block non-legal queries)
 
-Now featuring a **Dual-Mode Interface**:
-1.  **💬 Text Mode:** Deep conversational interface with an interactive Draft Editor.
-2.  **🎙️ Voice Mode:** Hands-free, voice-to-voice interaction.
+Now featuring a unified **Seamless Multi-Modal Interface**:
+- **💬 Unified Text & Voice:** Dictate legal queries using the dynamic Gemini-style input bar (which auto-swaps between voice and send buttons) and edit generated drafts inside the integrated live Editor.
+- **⚙️ Collapsible Settings Sidebar:** Toggle models, clear histories, or choose between **☀️ Light Mode**, **🌙 Dark Mode**, or **🌐 System Theme** inside a sliding glassmorphic sidebar.
 
 ---
 
@@ -84,19 +84,16 @@ bharat_law_gpt/
 │   └── pdf_files/          # Raw Indian legal documents used to build the vector DB
 │
 ├── db/
-│   └── faiss_store/        # Persistent FAISS & BM25 indexes
+│   ├── faiss_store/        # Persistent FAISS & BM25 indexes
+│   └── tts_cache/          # Persistent cross-session TTS audio cache (0ms playback!)
 │
 ├── src/                    # Modular Architecture
 │   ├── agent/              # LangGraph Agent, System Prompts, Tool Definitions
-│   ├── rag/                # Hybrid Vectorstore & Embedding Logic
-│   ├── ui/                 # Shared Dependencies & PDF Generation Logic
-│   └── voice/              # STT (Whisper) & TTS (EdgeTTS) logic
+│   ├── rag/                # Hybrid Vectorstore, Embedding & Chunking Logic
+│   ├── ui/                 # App Shell UI layout, styles, and custom event handlers
+│   └── voice/              # Edge-TTS reading pip and Faster-Whisper transcribers
 │
-├── pages/                  # Streamlit Pages
-│   ├── app_text_ui.py      # Text Chat Interface & Draft Editor
-│   └── app_voice_ui.py     # Voice Chat Interface
-│
-├── app_ui.py               # Main Landing Page / Portal
+├── app_ui.py               # Unified Web Portal (Streamlit Main App Entry)
 ├── build_db.py             # Script to ingest PDFs and build the hybrid database
 ├── requirements.txt        # Python dependencies
 └── README.md
