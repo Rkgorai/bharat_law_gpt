@@ -25,3 +25,7 @@ torch
 ddgs
 fpdf2
 markdown
+fastapi
+uvicorn
+pydantic
+python-multipart

@@ -37,12 +37,12 @@ class RAGSearch:
             formatted += f"{role}: {msg['content']}\n"
         return formatted
 
-    def search_and_summarize(self, query: str, chat_history: list = [], top_k: int = 5) -> dict:
+    def search_and_summarize(self, query: str, chat_history: list = [], top_k: int = 5, bm25_weight: float = None, vector_weight: float = None) -> dict:
         """
         Retrieves docs and generates an answer using History + Context.
         """
         # 1. Search Vector DB
-        results = self.vectorstore.query(query, top_k=top_k)
+        results = self.vectorstore.query(query, top_k=top_k, bm25_weight=bm25_weight, vector_weight=vector_weight)
         
         # 2. Extract Text & Sources
         texts = []

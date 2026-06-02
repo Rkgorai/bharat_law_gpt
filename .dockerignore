@@ -1,0 +1,22 @@
+# Ignore local virtual environment
+env/
+.venv/
+venv/
+
+# Ignore local databases and cache (mounted dynamically via volumes instead)
+db/
+legal_docs/
+
+# Ignore git and IDE configurations
+.git/
+.gitignore
+.vscode/
+.idea/
+.devcontainer/
+
+# Ignore Python caches
+**/__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.pytest_cache/

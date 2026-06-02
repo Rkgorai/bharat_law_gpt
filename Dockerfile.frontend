@@ -1,0 +1,29 @@
+FROM python:3.10-slim
+
+# Copy the uv binaries directly from the official uv image
+COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /bin/
+
+# Set environment variables
+ENV PYTHONUNBUFFERED=1 \
+    PYTHONDONTWRITEBYTECODE=1 \
+    BACKEND_URL=http://backend:8000
+
+WORKDIR /app
+
+# Install only necessary frontend dependencies using uv
+RUN uv pip install --system --no-cache \
+    streamlit \
+    requests \
+    fpdf2 \
+    markdown \
+    streamlit-mic-recorder \
+    mutagen
+
+# Copy project files
+COPY . .
+
+# Expose Streamlit port
+EXPOSE 8501
+
+# Start Streamlit application
+CMD ["python", "-m", "streamlit", "run", "app_ui.py", "--server.port=8501", "--server.address=0.0.0.0"]

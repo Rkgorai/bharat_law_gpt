@@ -55,7 +55,18 @@ class VoiceHandler:
             return output_file
             
         try:
-            asyncio.run(self._generate_audio(text, output_file))
+            try:
+                loop = asyncio.get_running_loop()
+            except RuntimeError:
+                loop = None
+                
+            if loop and loop.is_running():
+                from concurrent.futures import ThreadPoolExecutor
+                with ThreadPoolExecutor() as executor:
+                    executor.submit(asyncio.run, self._generate_audio(text, output_file)).result()
+            else:
+                asyncio.run(self._generate_audio(text, output_file))
+                
             if os.environ.get("BHARAT_LAW_VERBOSE") == "1":
                 print(f"[INFO] TTS Cache Miss. Synthesized: {output_file}")
             return output_file

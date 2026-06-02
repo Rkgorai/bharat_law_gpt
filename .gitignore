@@ -208,5 +208,6 @@ __marimo__/
 
 # Local App Data
 db/latest_draft.txt
+db/tts_cache/
 .vscode/
 .devcontainer/

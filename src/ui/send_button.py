@@ -66,6 +66,30 @@ def render_send_button():
     <script>
     const btn = document.getElementById('send-btn');
     
+    // React state synchronizer to ensure Streamlit receives the submit token correctly
+    const setReactInputValue = (input, val) => {
+        try {
+            input.focus();
+            input.setSelectionRange(0, input.value.length);
+            parent.document.execCommand('insertText', false, val);
+        } catch (e) {
+            try {
+                const parentWindow = parent.window;
+                const setter = Object.getOwnPropertyDescriptor(parentWindow.HTMLInputElement.prototype, "value").set;
+                const lastVal = input.value;
+                setter.call(input, val);
+                const tracker = input._valueTracker;
+                if (tracker) {
+                    tracker.setValue(lastVal);
+                }
+                input.dispatchEvent(new parentWindow.Event('input', { bubbles: true }));
+                input.dispatchEvent(new parentWindow.Event('change', { bubbles: true }));
+            } catch (err) {
+                console.error("[Send Button] State sync failed: ", err);
+            }
+        }
+    };
+    
     // Sync button state (disabled/enabled) based on parent text input value
     const syncButtonState = () => {
         try {
@@ -75,6 +99,18 @@ def render_send_button():
                     btn.classList.add('disabled');
                 } else {
                     btn.classList.remove('disabled');
+                }
+                
+                // Bind Enter keypress listener to append submit token
+                if (!chatInput.dataset.enterListenerAdded) {
+                    chatInput.addEventListener('keydown', (e) => {
+                        if (e.key === 'Enter') {
+                            if (!chatInput.value.endsWith('\u200c') && !chatInput.value.endsWith('\u200b')) {
+                                setReactInputValue(chatInput, chatInput.value + '\u200c');
+                            }
+                        }
+                    });
+                    chatInput.dataset.enterListenerAdded = 'true';
                 }
             }
         } catch (e) {}
@@ -89,6 +125,10 @@ def render_send_button():
         try {
             const chatInput = parent.document.querySelector('input[placeholder="Ask a legal question..."]');
             if (chatInput && chatInput.value.trim() !== '') {
+                // Append explicit submit token
+                if (!chatInput.value.endsWith('\u200c') && !chatInput.value.endsWith('\u200b')) {
+                    setReactInputValue(chatInput, chatInput.value + '\u200c');
+                }
                 // Force immediate text box blur and state sync
                 chatInput.blur();
                 

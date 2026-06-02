@@ -43,6 +43,21 @@ def render_sidebar():
             st.rerun()
             
         st.markdown("---")
+        st.markdown("### 🎛️ Hybrid Search Balance")
+        bm25_w = st.slider(
+            "BM25 (Keywords) Weight",
+            min_value=0.0,
+            max_value=1.0,
+            value=st.session_state.get("bm25_weight", 0.6),
+            step=0.05,
+            help="Higher values favor exact legal keyword matches. Lower values favor conceptual similarity."
+        )
+        vector_w = round(1.0 - bm25_w, 2)
+        st.write(f"Vector (Semantic) Weight: **{vector_w}**")
+        st.session_state.bm25_weight = bm25_w
+        st.session_state.vector_weight = vector_w
+        
+        st.markdown("---")
         st.markdown("### ℹ️ About")
         st.markdown(
             "**Bharat Law GPT** is an AI-powered legal assistant tailored for Indian law queries, providing accurate analysis and automated drafting.\n\n"

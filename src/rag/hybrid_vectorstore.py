@@ -216,18 +216,24 @@ class HybridVectorStore:
         
         return results
 
-    def hybrid_search(self, query_text: str, top_k: int = 5) -> List[Dict]:
+    def hybrid_search(self, query_text: str, top_k: int = 5, bm25_weight: float = None, vector_weight: float = None) -> List[Dict]:
         """
         Perform hybrid search combining BM25 and vector search.
         
         Args:
             query_text: The search query
             top_k: Number of results to return
+            bm25_weight: Weight for BM25 (0-1), defaults to self.bm25_weight
+            vector_weight: Weight for vector (0-1), defaults to self.vector_weight
             
         Returns:
             List of results with combined scores
         """
-        _log(f"[INFO] Performing hybrid search for: '{query_text}'")
+        # Determine dynamic weights
+        b_weight = bm25_weight if bm25_weight is not None else self.bm25_weight
+        v_weight = vector_weight if vector_weight is not None else self.vector_weight
+        
+        _log(f"[INFO] Performing hybrid search for: '{query_text}' (BM25: {b_weight}, Vector: {v_weight})")
         
         # Get more candidates from each method
         candidate_k = top_k * 3
@@ -252,7 +258,7 @@ class HybridVectorStore:
                 idx = result["index"]
                 normalized_score = (result["score"] - min_vector_score) / vector_range
                 combined_scores[idx] = {
-                    "score": normalized_score * self.vector_weight,
+                    "score": normalized_score * v_weight,
                     "metadata": result["metadata"]
                 }
         
@@ -267,10 +273,10 @@ class HybridVectorStore:
                 normalized_score = (result["score"] - min_bm25_score) / bm25_range
                 
                 if idx in combined_scores:
-                    combined_scores[idx]["score"] += normalized_score * self.bm25_weight
+                    combined_scores[idx]["score"] += normalized_score * b_weight
                 else:
                     combined_scores[idx] = {
-                        "score": normalized_score * self.bm25_weight,
+                        "score": normalized_score * b_weight,
                         "metadata": result["metadata"]
                     }
         
@@ -292,9 +298,9 @@ class HybridVectorStore:
         _log(f"[INFO] Hybrid search returned {len(final_results)} results")
         return final_results
 
-    def query(self, query_text: str, top_k: int = 5) -> List[Dict]:
+    def query(self, query_text: str, top_k: int = 5, bm25_weight: float = None, vector_weight: float = None) -> List[Dict]:
         """Main query method that uses hybrid search."""
-        return self.hybrid_search(query_text, top_k=top_k)
+        return self.hybrid_search(query_text, top_k=top_k, bm25_weight=bm25_weight, vector_weight=vector_weight)
 
 
 # Example usage

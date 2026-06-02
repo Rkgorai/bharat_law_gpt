@@ -26,6 +26,7 @@ class EmbeddingPipeline:
         self.model = _MODEL_CACHE[model_name]
 
     def chunk_documents(self, documents: List[Any]) -> List[Any]:
+        import re
         splitter = RecursiveCharacterTextSplitter(
             chunk_size=self.chunk_size,
             chunk_overlap=self.chunk_overlap,
@@ -34,7 +35,38 @@ class EmbeddingPipeline:
         )
         chunks = splitter.split_documents(documents)
         _log(f"[INFO] Split {len(documents)} documents into {len(chunks)} chunks.")
-        return chunks
+        
+        # Structure-Aware Legal Chunk Enrichment
+        enriched_chunks = []
+        for chunk in chunks:
+            source = chunk.metadata.get("source", "Unknown Act")
+            act_name = os.path.splitext(os.path.basename(source))[0].replace("_", " ").replace("-", " ")
+            page_num = chunk.metadata.get("page", 0) + 1
+            
+            # Extract mentions of Section, Article, Chapter
+            citations = re.findall(r'\b(?:Section|Sec\.|Article|Art\.|Chapter|Chap\.)\s+[A-Za-z0-9\-]+', chunk.page_content, re.IGNORECASE)
+            # Normalize citations
+            unique_citations = []
+            seen = set()
+            for cit in citations:
+                norm_cit = re.sub(r'\s+', ' ', cit).strip().title()
+                # Normalize common abbreviations
+                norm_cit = norm_cit.replace("Sec.", "Section").replace("Art.", "Article").replace("Chap.", "Chapter")
+                if norm_cit.lower() not in seen:
+                    seen.add(norm_cit.lower())
+                    unique_citations.append(norm_cit)
+            
+            citation_str = ", ".join(unique_citations)
+            header = f"[Act: {act_name} | Page: {page_num}"
+            if citation_str:
+                header += f" | Citations: {citation_str}"
+            header += "] "
+            
+            # Prepend header to page_content
+            chunk.page_content = header + chunk.page_content
+            enriched_chunks.append(chunk)
+            
+        return enriched_chunks
 
     def embed_chunks(self, chunks: List[Any]) -> np.ndarray:
         texts = [chunk.page_content for chunk in chunks]
