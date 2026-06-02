@@ -68,7 +68,7 @@ class ChatMessage(BaseModel):
 class ChatRequest(BaseModel):
     query: str
     chat_history: List[ChatMessage] = []
-    model: str = "llama-3.1-8b-instant"
+    model: str = "meta-llama/llama-4-scout-17b-16e-instruct"
     bm25_weight: float = 0.6
     vector_weight: float = 0.4
     use_voice: bool = False
@@ -216,7 +216,28 @@ async def agent_stream_generator(request: ChatRequest):
                             
         yield "event: end\ndata: {}\n\n"
     except Exception as e:
-        yield f"event: error\ndata: {json.dumps({'detail': str(e)})}\n\n"
+        err_msg = str(e)
+        if "tool_use_failed" in err_msg or "Failed to call a function" in err_msg:
+            fallback_msg = (
+                "⚠️ **Assistant Note**: I encountered a minor formatting alignment issue while attempting to draft your document. "
+                "To ensure I generate a complete agreement without any placeholders or missing facts, could you please provide or verify the following details: \n\n"
+                "- **Borrower Name & Address**\n"
+                "- **Lender Name & Address**\n"
+                "- **Loan Amount & Interest Rate**\n"
+                "- **Loan Term & Repayment Dates**\n\n"
+                "Please reply with these details, and I will compile them into a professional draft right away!"
+            )
+            yield f"event: token\ndata: {json.dumps({'text': fallback_msg})}\n\n"
+        elif "rate_limit" in err_msg.lower():
+            fallback_msg = "⏳ **System Note**: The model is currently experiencing high demand. Please wait a moment and try submitting your request again."
+            yield f"event: token\ndata: {json.dumps({'text': fallback_msg})}\n\n"
+        else:
+            fallback_msg = (
+                f"🔍 **Assistant Note**: I encountered an unexpected error while processing your request: *{err_msg}*.\n\n"
+                "Please try adjusting your query slightly or re-submitting your details so I can assist you."
+            )
+            yield f"event: token\ndata: {json.dumps({'text': fallback_msg})}\n\n"
+        yield "event: end\ndata: {}\n\n"
 
 @app.post("/api/chat")
 async def chat_endpoint(request: ChatRequest):

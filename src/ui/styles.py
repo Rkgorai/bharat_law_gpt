@@ -414,6 +414,7 @@ button[data-testid="sidebar-toggle"] svg {{
 
 /* 6. GUARANTEED FIXED OVAL CHATBAR */
 div[data-testid="stHorizontalBlock"]:has(.stTextInput input),
+div[data-testid="stHorizontalBlock"]:has(.stTextArea textarea),
 div.chatbar-block {{
     position: fixed !important;
     bottom: 25px !important;
@@ -437,6 +438,7 @@ div.chatbar-block {{
 }}
 
 div[data-testid="stHorizontalBlock"]:has(.stTextInput input):focus-within,
+div[data-testid="stHorizontalBlock"]:has(.stTextArea textarea):focus-within,
 div.chatbar-block:focus-within {{
     border-color: #4285F4 !important;
     box-shadow: 0 0 0 1px #4285F4 !important;
@@ -444,6 +446,7 @@ div.chatbar-block:focus-within {{
 
 /* Set the column widths dynamically using flex layout for maximum responsiveness */
 div[data-testid="stHorizontalBlock"]:has(.stTextInput input) div[data-testid="column"]:nth-child(1),
+div[data-testid="stHorizontalBlock"]:has(.stTextArea textarea) div[data-testid="column"]:nth-child(1),
 div.chatbar-block div[data-testid="column"]:nth-child(1) {{
     flex: 1 1 0% !important;
     width: auto !important;
@@ -454,6 +457,7 @@ div.chatbar-block div[data-testid="column"]:nth-child(1) {{
 
 /* Column 2: Mic button */
 div[data-testid="stHorizontalBlock"]:has(.stTextInput input) div[data-testid="column"]:nth-child(2),
+div[data-testid="stHorizontalBlock"]:has(.stTextArea textarea) div[data-testid="column"]:nth-child(2),
 div.chatbar-block div[data-testid="column"]:nth-child(2) {{
     flex: 0 0 44px !important;
     width: 44px !important;
@@ -465,6 +469,7 @@ div.chatbar-block div[data-testid="column"]:nth-child(2) {{
 
 /* Column 3: Send button */
 div[data-testid="stHorizontalBlock"]:has(.stTextInput input) div[data-testid="column"]:nth-child(3),
+div[data-testid="stHorizontalBlock"]:has(.stTextArea textarea) div[data-testid="column"]:nth-child(3),
 div.chatbar-block div[data-testid="column"]:nth-child(3) {{
     flex: 0 0 44px !important;
     width: 44px !important;
@@ -495,7 +500,8 @@ div[data-testid="stHorizontalBlock"].voice-active div[data-testid="column"]:nth-
 }}
 
 /* 2. When voice is NOT active and input is empty (placeholder-shown): hide Column 3 (send) and show Column 2 (mic) */
-div[data-testid="stHorizontalBlock"]:not(.voice-active):has(.stTextInput input:placeholder-shown) div[data-testid="column"]:nth-child(3) {{
+div[data-testid="stHorizontalBlock"]:not(.voice-active):has(.stTextInput input:placeholder-shown) div[data-testid="column"]:nth-child(3),
+div[data-testid="stHorizontalBlock"]:not(.voice-active):has(.stTextArea textarea:placeholder-shown) div[data-testid="column"]:nth-child(3) {{
     display: none !important;
     width: 0px !important;
     flex: 0 0 0px !important;
@@ -503,7 +509,8 @@ div[data-testid="stHorizontalBlock"]:not(.voice-active):has(.stTextInput input:p
     margin: 0 !important;
     padding: 0 !important;
 }}
-div[data-testid="stHorizontalBlock"]:not(.voice-active):has(.stTextInput input:placeholder-shown) div[data-testid="column"]:nth-child(2) {{
+div[data-testid="stHorizontalBlock"]:not(.voice-active):has(.stTextInput input:placeholder-shown) div[data-testid="column"]:nth-child(2),
+div[data-testid="stHorizontalBlock"]:not(.voice-active):has(.stTextArea textarea:placeholder-shown) div[data-testid="column"]:nth-child(2) {{
     display: flex !important;
     flex: 0 0 44px !important;
     width: 44px !important;
@@ -511,7 +518,8 @@ div[data-testid="stHorizontalBlock"]:not(.voice-active):has(.stTextInput input:p
 }}
 
 /* 3. When voice is NOT active and input is not empty (placeholder-hidden): hide Column 2 (mic) and show Column 3 (send) */
-div[data-testid="stHorizontalBlock"]:not(.voice-active):has(.stTextInput input:not(:placeholder-shown)) div[data-testid="column"]:nth-child(2) {{
+div[data-testid="stHorizontalBlock"]:not(.voice-active):has(.stTextInput input:not(:placeholder-shown)) div[data-testid="column"]:nth-child(2),
+div[data-testid="stHorizontalBlock"]:not(.voice-active):has(.stTextArea textarea:not(:placeholder-shown)) div[data-testid="column"]:nth-child(2) {{
     display: none !important;
     width: 0px !important;
     flex: 0 0 0px !important;
@@ -519,7 +527,8 @@ div[data-testid="stHorizontalBlock"]:not(.voice-active):has(.stTextInput input:n
     margin: 0 !important;
     padding: 0 !important;
 }}
-div[data-testid="stHorizontalBlock"]:not(.voice-active):has(.stTextInput input:not(:placeholder-shown)) div[data-testid="column"]:nth-child(3) {{
+div[data-testid="stHorizontalBlock"]:not(.voice-active):has(.stTextInput input:not(:placeholder-shown)) div[data-testid="column"]:nth-child(3),
+div[data-testid="stHorizontalBlock"]:not(.voice-active):has(.stTextArea textarea:not(:placeholder-shown)) div[data-testid="column"]:nth-child(3) {{
     display: flex !important;
     flex: 0 0 44px !important;
     width: 44px !important;
@@ -578,20 +587,26 @@ div.chatbar-block:not(.chatbar-empty):not(.voice-active) div[data-testid="column
 }}
 
 /* 7. Transparent Inner Inputs */
-.stTextInput div[data-baseweb="base-input"], .stTextInput div[data-baseweb="input"] {{
+.stTextInput div[data-baseweb="base-input"],
+.stTextInput div[data-baseweb="input"],
+.stTextArea div[data-baseweb="base-input"],
+.stTextArea div[data-baseweb="textarea"] {{
     background-color: transparent !important;
     border: none !important;
 }}
-.stTextInput input {{
+.stTextInput input,
+.stTextArea textarea {{
     border: none !important;
     background-color: transparent !important;
     box-shadow: none !important;
     color: var(--text-color) !important;
     -webkit-text-fill-color: var(--text-color) !important;
     font-size: 16px !important;
-    padding: 15px 5px !important; /* Taller input */
+    padding: 10px 5px !important;
+    resize: none !important;
 }}
-.stTextInput input:focus {{
+.stTextInput input:focus,
+.stTextArea textarea:focus {{
     background-color: transparent !important;
     box-shadow: none !important;
 }}
@@ -754,7 +769,8 @@ div.chatbar-block div[data-testid="column"] > div {{
 (function() {{
     const runChatbarScript = () => {{
         try {{
-            const chatInput = document.querySelector('.stTextInput input') || document.querySelector('input[placeholder="Ask a legal question..."]');
+            const chatInput = document.querySelector('.stTextArea textarea, .stTextInput input') || 
+                              document.querySelector('textarea[placeholder="Ask a legal question..."], input[placeholder="Ask a legal question..."]');
             if (chatInput) {{
                 const block = chatInput.closest('div[data-testid="stHorizontalBlock"]');
                 if (block) {{
@@ -786,7 +802,8 @@ div.chatbar-block div[data-testid="column"] > div {{
     window.addEventListener('message', (event) => {{
         try {{
             if (event.data && event.data.type === 'voice-active') {{
-                const chatInput = document.querySelector('.stTextInput input') || document.querySelector('input[placeholder="Ask a legal question..."]');
+                const chatInput = document.querySelector('.stTextArea textarea, .stTextInput input') || 
+                                  document.querySelector('textarea[placeholder="Ask a legal question..."], input[placeholder="Ask a legal question..."]');
                 if (chatInput) {{
                     const block = chatInput.closest('div[data-testid="stHorizontalBlock"]');
                     if (block) {{

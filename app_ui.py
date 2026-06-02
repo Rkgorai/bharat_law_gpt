@@ -60,12 +60,13 @@ with st.container():
     col1, col2, col3 = st.columns([14, 1, 1])
     
     with col1:
-        st.text_input(
+        st.text_area(
             "Ask something...", 
             key="chat_input_box", 
             label_visibility="collapsed",
             placeholder="Ask a legal question...",
-            on_change=submit_text_query
+            on_change=submit_text_query,
+            height=68
         )
 
     with col2:

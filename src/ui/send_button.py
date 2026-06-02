@@ -75,7 +75,9 @@ def render_send_button():
         } catch (e) {
             try {
                 const parentWindow = parent.window;
-                const setter = Object.getOwnPropertyDescriptor(parentWindow.HTMLInputElement.prototype, "value").set;
+                const isTextArea = input.tagName.toLowerCase() === 'textarea';
+                const proto = isTextArea ? parentWindow.HTMLTextAreaElement.prototype : parentWindow.HTMLInputElement.prototype;
+                const setter = Object.getOwnPropertyDescriptor(proto, "value").set;
                 const lastVal = input.value;
                 setter.call(input, val);
                 const tracker = input._valueTracker;
@@ -90,10 +92,10 @@ def render_send_button():
         }
     };
     
-    // Sync button state (disabled/enabled) based on parent text input value
+    // Sync button state (disabled/enabled) based on parent text input/textarea value
     const syncButtonState = () => {
         try {
-            const chatInput = parent.document.querySelector('input[placeholder="Ask a legal question..."]');
+            const chatInput = parent.document.querySelector('textarea[placeholder="Ask a legal question..."], input[placeholder="Ask a legal question..."]');
             if (chatInput) {
                 if (chatInput.value.trim() === '') {
                     btn.classList.add('disabled');
@@ -101,13 +103,37 @@ def render_send_button():
                     btn.classList.remove('disabled');
                 }
                 
-                // Bind Enter keypress listener to append submit token
+                // Bind Enter/keydown listener to handle submissions
                 if (!chatInput.dataset.enterListenerAdded) {
                     chatInput.addEventListener('keydown', (e) => {
                         if (e.key === 'Enter') {
+                            const isTextArea = chatInput.tagName.toLowerCase() === 'textarea';
+                            // For textarea, Enter alone submits; Shift+Enter inserts a new line
+                            if (isTextArea && e.shiftKey) {
+                                return; // Let default shift+enter behavior happen
+                            }
+                            
+                            e.preventDefault(); // For input, or textarea without shift, prevent default
+                            
                             if (!chatInput.value.endsWith('\u200c') && !chatInput.value.endsWith('\u200b')) {
                                 setReactInputValue(chatInput, chatInput.value + '\u200c');
                             }
+                            
+                            // Force immediate text box blur and state sync
+                            chatInput.blur();
+                            
+                            // Wait 50ms for state to sync, then trigger Enter keypress
+                            setTimeout(() => {
+                                const enterEvent = new parent.window.KeyboardEvent('keydown', {
+                                    bubbles: true,
+                                    cancelable: true,
+                                    key: 'Enter',
+                                    code: 'Enter',
+                                    keyCode: 13,
+                                    which: 13
+                                });
+                                chatInput.dispatchEvent(enterEvent);
+                            }, 50);
                         }
                     });
                     chatInput.dataset.enterListenerAdded = 'true';
@@ -123,7 +149,7 @@ def render_send_button():
     // Handle click event to submit query securely
     btn.addEventListener('click', () => {
         try {
-            const chatInput = parent.document.querySelector('input[placeholder="Ask a legal question..."]');
+            const chatInput = parent.document.querySelector('textarea[placeholder="Ask a legal question..."], input[placeholder="Ask a legal question..."]');
             if (chatInput && chatInput.value.trim() !== '') {
                 // Append explicit submit token
                 if (!chatInput.value.endsWith('\u200c') && !chatInput.value.endsWith('\u200b')) {

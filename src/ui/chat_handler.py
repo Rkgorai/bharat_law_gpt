@@ -15,7 +15,8 @@ from src.ui.pdf_utils import create_pdf
 BACKEND_URL = os.getenv("BACKEND_URL", "http://localhost:8000")
 
 AVAILABLE_MODELS = {
-    "Llama 4 Scout 17B": "meta-llama/llama-4-scout-17b-16e-instruct",
+    "Llama 3.3 70B": "llama-3.3-70b-versatile",
+    "Llama 4 Scout 17B (Recommended)": "meta-llama/llama-4-scout-17b-16e-instruct",
     "Llama 3.1 8B": "llama-3.1-8b-instant",
     "GPT-OSS 20B": "openai/gpt-oss-20b",
     "Qwen 32B": "qwen/qwen3-32b"
