@@ -87,11 +87,7 @@ def draft_document(document_type: str, details: str) -> str:
     prompt = f"You are an expert legal drafter. Draft a professional {document_type} using exactly these details:\n{details}\n\nDo not include any introductory text, just output the document."
     response = llm.invoke(prompt)
     
-    # Save the huge draft text to a file so it doesn't crash the Groq tool parser
-    with open("db/latest_draft.txt", "w") as f:
-        f.write(response.content)
-        
-    return "<DRAFT_SAVED> Successfully drafted! Tell the user the draft is ready in the editor."
+    return f"<DRAFT_SAVED>\n{response.content}"
 
 tools = [local_rag_search, web_search, calculate_deadline, draft_document]
 

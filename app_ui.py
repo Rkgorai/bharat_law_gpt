@@ -6,8 +6,8 @@ import sys
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), ".")))
 
 # Import modular components
+from src.ui.state_manager import initialize_session_state
 from src.ui.chat_handler import (
-    initialize_session_state,
     submit_text_query,
     render_chat_history,
     render_draft_editor,
@@ -17,9 +17,9 @@ from src.ui.chat_handler import (
     AVAILABLE_MODELS
 )
 from src.ui.styles import inject_custom_styles
-from src.ui.voice_dictation import render_dictation_mic
-from src.ui.send_button import render_send_button
-from src.ui.sidebar import render_sidebar
+from src.ui.components.voice_dictation import render_dictation_mic
+from src.ui.components.send_button import render_send_button
+from src.ui.components.sidebar import render_sidebar
 
 # --- CONFIGURATION ---
 PAGE_TITLE = "Bharat Law GPT"

@@ -21,38 +21,7 @@ AVAILABLE_MODELS = {
     "Qwen 32B": "qwen/qwen3-32b"
 }
 
-def initialize_session_state():
-    if "theme" not in st.session_state:
-        st.session_state.theme = "system"
-    if "messages" not in st.session_state:
-        cleanup_recordings()
-        st.session_state.messages = []
-    if "agent_system" not in st.session_state:
-        st.session_state.agent_system = None
-    if "current_model" not in st.session_state:
-        st.session_state.current_model = "meta-llama/llama-4-scout-17b-16e-instruct"
-    if "draft_content" not in st.session_state:
-        st.session_state.draft_content = None
-    if "audio_to_play" not in st.session_state:
-        st.session_state.audio_to_play = None
-    if "pending_query" not in st.session_state:
-        st.session_state.pending_query = None
-    if "pending_query_is_voice" not in st.session_state:
-        st.session_state.pending_query_is_voice = False
-    if "last_input_was_voice" not in st.session_state:
-        st.session_state.last_input_was_voice = False
-    if "last_processed_audio_id" not in st.session_state:
-        st.session_state.last_processed_audio_id = None
-    if "voice_output_all" not in st.session_state:
-        st.session_state.voice_output_all = False
-    if "last_played_audio" not in st.session_state:
-        st.session_state.last_played_audio = None
-    if "play_message_content" not in st.session_state:
-        st.session_state.play_message_content = None
-    if "play_message_index" not in st.session_state:
-        st.session_state.play_message_index = None
-    if "last_processed_query" not in st.session_state:
-        st.session_state.last_processed_query = None
+
 
 def autoplay_audio(file_path):
     with open(file_path, "rb") as f:
@@ -145,28 +114,21 @@ def process_query(query: str, use_voice: bool = False):
         answer_text = ""
         
         try:
-            for event in st.session_state.agent_system.stream({"messages": formatted_history}):
-                for node_name, value in event.items():
-                    if "messages" in value:
-                        messages = value["messages"]
-                        if not isinstance(messages, list):
-                            messages = [messages]
-                        for msg in messages:
-                            if hasattr(msg, "tool_calls") and msg.tool_calls:
-                                for tool_call in msg.tool_calls:
-                                    status_container.write(f"⚙️ Running `{tool_call['name']}`")
-                            elif getattr(msg, "type", "") == "tool":
-                                status_container.write(f"✅ Extracted data from `{msg.name}`")
-                                if "<DRAFT_SAVED>" in str(msg.content):
-                                    if os.path.exists("db/latest_draft.txt"):
-                                        with open("db/latest_draft.txt", "r") as f:
-                                            st.session_state.draft_content = f.read()
-                                        st.session_state.messages.append({"role": "assistant", "content": "I have generated the legal draft. Please review and export it in the editor below."})
-                                        status_container.update(label="Draft Generated", state="complete", expanded=False)
-                                        st.rerun()
-                            
-                            if getattr(msg, "type", "") == "ai" and msg.content:
-                                answer_text += msg.content
+            from src.agent.executor import stream_agent_execution
+            for event in stream_agent_execution(st.session_state.agent_system, formatted_history, use_voice):
+                if event["type"] == "status":
+                    status_container.write(event["data"])
+                elif event["type"] == "draft":
+                    st.session_state.draft_content = event["content"]
+                    st.session_state.messages.append({"role": "assistant", "content": "I have generated the legal draft. Please review and export it in the editor below."})
+                    status_container.update(label="Draft Generated", state="complete", expanded=False)
+                    st.rerun()
+                elif event["type"] == "token":
+                    answer_text += event["data"]
+                elif event["type"] == "error":
+                    status_container.update(label="Error Occurred", state="error", expanded=True)
+                    st.error(f"Error: {event['data']}")
+                    return
                                 
             # First, collapse the thinking status container cleanly and instantly
             status_container.update(label="Complete", state="complete", expanded=False)
@@ -297,25 +259,4 @@ def handle_pending_query():
         st.session_state.pending_query_is_voice = False
         process_query(q, use_voice=is_voice)
 
-def cleanup_recordings():
-    dir_path = "db/recordings"
-    if os.path.exists(dir_path):
-        try:
-            shutil.rmtree(dir_path)
-        except Exception as e:
-            if os.environ.get("BHARAT_LAW_VERBOSE") == "1":
-                print(f"[ERROR] Failed to clean recordings dir: {e}")
-    try:
-        os.makedirs(dir_path, exist_ok=True)
-    except Exception:
-        pass
 
-def clear_chat_and_recordings():
-    st.session_state.messages = []
-    st.session_state.audio_to_play = None
-    st.session_state.last_played_audio = None
-    st.session_state.draft_content = None
-    cleanup_recordings()
-
-# Register process exit cleanup handler
-atexit.register(cleanup_recordings)

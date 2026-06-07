@@ -1,6 +1,7 @@
 import streamlit as st
 
-from src.ui.chat_handler import clear_chat_and_recordings, AVAILABLE_MODELS
+from src.ui.state_manager import clear_chat_and_recordings
+from src.ui.chat_handler import AVAILABLE_MODELS
 
 def render_sidebar():
     with st.sidebar:

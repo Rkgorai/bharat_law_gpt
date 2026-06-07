@@ -10,7 +10,7 @@ This makes the system:
 - **More accurate** (Answers grounded in uploaded PDFs via Hybrid FAISS/BM25 Search)
 - **More autonomous** (Calculates dates and searches the web dynamically)
 - **More useful** (Automatically asks for missing facts and drafts full legal documents)
-- **Highly secure** (Strict system guardrails aggressively block non-legal queries)
+- **Highly secure** (A dedicated LLM Guardrail instantly intercepts prompt injections and non-legal queries before they reach the main agent)
 
 Now featuring a unified **Seamless Multi-Modal Interface**:
 - **💬 Unified Text & Voice:** Dictate legal queries using the dynamic Gemini-style input bar (which auto-swaps between voice and send buttons) and edit generated drafts inside the integrated live Editor.
@@ -70,7 +70,7 @@ sequenceDiagram
 - **Web Scraping:** If a case is too recent for the local database, the AI automatically spins up `ddgs` to scrape DuckDuckGo for live headlines.
 - **Automated Document Drafter:** Tells the AI to draft a rent agreement or affidavit. It will interactively gather missing facts from you, silently generate the draft via an isolated LLM call (bypassing strict API limits), and inject it directly into the UI.
 - **PDF Generation Engine:** Includes a custom `fpdf2` rendering pipeline that parses Markdown text and generates official-looking PDFs with Times New Roman typography, proper spacing, and a faded "DRAFT" watermark.
-- **Security Guardrails:** Strictly enforced system prompts ensure the AI refuses any non-legal questions (coding, math, general trivia).
+- **Two-Tiered Security Guardrails:** An advanced pre-processing module intercepts user prompts *before* they reach the main agent. It uses regex to instantly block malicious prompt injections/jailbreaks, and an ultra-fast 1-token LLM classifier to reject non-legal queries (coding, trivia) to save latency and token costs.
 - **Dual Interface:** Switch seamlessly between Text and Voice modes using shared memory caching to prevent LLM reload lag.
 
 ---
@@ -88,7 +88,7 @@ bharat_law_gpt/
 │   └── tts_cache/          # Persistent cross-session TTS audio cache (0ms playback!)
 │
 ├── src/                    # Modular Architecture
-│   ├── agent/              # LangGraph Agent, System Prompts, Tool Definitions
+│   ├── agent/              # LangGraph Agent, System Prompts, Guardrails, Tool Definitions
 │   ├── rag/                # Hybrid Vectorstore, Embedding & Chunking Logic
 │   ├── ui/                 # App Shell UI layout, styles, and custom event handlers
 │   └── voice/              # Edge-TTS reading pip and Faster-Whisper transcribers
