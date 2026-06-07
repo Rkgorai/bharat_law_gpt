@@ -101,6 +101,25 @@ def process_query(query: str, use_voice: bool = False):
     st.session_state.play_message_content = None
     st.session_state.last_processed_query = query
 
+    # 1. RUN QUERY GUARDRAIL
+    from src.agent.guardrails import QueryGuardrail
+    if "guardrail" not in st.session_state:
+        st.session_state.guardrail = QueryGuardrail(llm_model=st.session_state.get("current_model", "llama-3.1-8b-instant"))
+    
+    is_safe, refusal_msg = st.session_state.guardrail.check_query(query)
+    if not is_safe:
+        st.session_state.messages.append({"role": "user", "content": query})
+        with st.chat_message("user"):
+            st.markdown(query)
+        st.session_state.messages.append({"role": "assistant", "content": refusal_msg, "audio_path": None})
+        with st.chat_message("assistant"):
+            st.markdown(refusal_msg)
+            
+        # Release the query lock so they can try again
+        st.session_state.last_processed_query = None
+        st.rerun()
+        return
+
     print(f"[USER] Query: \"{query}\"")
     st.session_state.messages.append({"role": "user", "content": query})
     ensure_system_ready()
